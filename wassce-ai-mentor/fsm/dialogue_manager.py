@@ -9,7 +9,6 @@ state from the database, returns the next state and the response text.
 """
 import json
 import uuid
-import random
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
@@ -20,7 +19,8 @@ from db.models import Student, SessionRow, Interaction
 from fsm.states import FSMState, parse_subject
 from fsm.answer_evaluator import evaluate_answer
 from fsm import messages
-from rag.retriever import get_by_id, get_by_subject
+from rag.retriever import get_by_id
+from adaptive.engine import pick_next_question, update_performance, identify_weakest_subject
 from config import get_settings
 from utils.logger import get_logger
 
@@ -161,35 +161,6 @@ def _session_stats(db: Session, session_id: str) -> tuple[int, int]:
 
 # ─── QUESTION HELPERS ─────────────────────────────────────────────────────────
 
-def _pick_next_question(db: Session, session: SessionRow, subject: str) -> Optional[dict]:
-    """
-    Pick the next practice question for the student.
-
-    Placeholder for Step 6 (Adaptive Engine). Uses direct ChromaDB metadata
-    lookup to get all questions for the subject at current difficulty, then
-    randomly selects one not already in the session history.
-    """
-    history = json.loads(session.question_history or "[]")
-    difficulty = session.current_difficulty or "easy"
-
-    candidates = [
-        q for q in get_by_subject(subject, difficulty=difficulty)
-        if q["question_id"] not in history
-    ]
-
-    # Fall back: any difficulty in this subject if nothing at target difficulty
-    if not candidates:
-        candidates = [
-            q for q in get_by_subject(subject)
-            if q["question_id"] not in history
-        ]
-
-    if not candidates:
-        return None
-
-    return random.choice(candidates)
-
-
 def _store_question_in_session(session: SessionRow, question: dict) -> None:
     """Append question_id to session history; keep last N per config."""
     history = json.loads(session.question_history or "[]")
@@ -296,7 +267,7 @@ def handle_message(
                 new_state=current_state,
             )
 
-        question = _pick_next_question(db, session, subject_key)
+        question = pick_next_question(db, session, requested_subject=subject_key)
         if question is None:
             _log_interaction(db, session, student_id, channel, current_state,
                              text, None, None, 0, 0.0)
@@ -338,6 +309,17 @@ def handle_message(
 
         evaluation = "skip" if text_upper == "SKIP" else evaluate_answer(text, current_q["correct_answer"])
 
+        # FR-26: update performance vector (skip counts as incorrect for tracking purposes)
+        counted_correct = evaluation in {"correct", "partial"}
+        update_performance(
+            db=db,
+            student_id=student_id,
+            subject=current_q["subject"],
+            topic=current_q["topic"],
+            difficulty=current_q["difficulty"],
+            correct=counted_correct,
+        )
+
         verdict_map = {
             "correct": messages.answer_correct(),
             "partial": messages.answer_partial(),
@@ -378,15 +360,16 @@ def handle_message(
                     new_state=FSMState.SUBJECT_SELECTION,
                 )
 
-            question = _pick_next_question(db, session, session.current_subject)
+            question = pick_next_question(db, session, requested_subject=session.current_subject)
             if question is None:
                 attempted, correct = _session_stats(db, session.session_id)
+                weakest = identify_weakest_subject(db, student_id) or session.current_subject
                 session.fsm_state = FSMState.SESSION_SUMMARY.value
                 db.commit()
                 _log_interaction(db, session, student_id, channel, current_state,
                                  text, None, None, 0, 0.0)
                 return DialogueResult(
-                    response=messages.session_summary(attempted, correct, session.current_subject),
+                    response=messages.session_summary(attempted, correct, weakest),
                     new_state=FSMState.SESSION_SUMMARY,
                 )
 
