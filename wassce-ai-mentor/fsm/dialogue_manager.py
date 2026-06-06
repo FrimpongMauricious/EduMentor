@@ -1,1 +1,433 @@
-"""FSM Dialogue Manager: manages multi-turn conversation state per student"""
+"""
+fsm/dialogue_manager.py — Finite State Machine dialogue manager.
+
+Implements FR-10 through FR-15 (Dialogue Management).
+Implements FR-FSM-01 through FR-FSM-06.
+
+Each call to handle_message() takes a student's incoming text and current
+state from the database, returns the next state and the response text.
+"""
+import json
+import uuid
+import random
+from datetime import datetime, timezone, timedelta
+from typing import Optional
+
+from sqlalchemy.orm import Session
+from sqlalchemy import select, func, case
+
+from db.models import Student, SessionRow, Interaction
+from fsm.states import FSMState, parse_subject
+from fsm.answer_evaluator import evaluate_answer
+from fsm import messages
+from rag.retriever import get_by_id, get_by_subject
+from config import get_settings
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
+settings = get_settings()
+
+
+class DialogueResult:
+    """Result returned from a single FSM transition."""
+
+    def __init__(
+        self,
+        response: str,
+        new_state: FSMState,
+        question_id: Optional[str] = None,
+        evaluation_result: Optional[str] = None,
+        llm_response_ms: int = 0,
+        retrieval_score: float = 0.0,
+        end_session: bool = False,
+    ):
+        self.response = response
+        self.new_state = new_state
+        self.question_id = question_id
+        self.evaluation_result = evaluation_result
+        self.llm_response_ms = llm_response_ms
+        self.retrieval_score = retrieval_score
+        self.end_session = end_session
+
+
+# ─── DB HELPERS ──────────────────────────────────────────────────────────────
+
+def _get_or_create_student(db: Session, student_id: str, channel: str) -> Student:
+    """FR-06: register student on first contact."""
+    student = db.get(Student, student_id)
+    if student is None:
+        student = Student(
+            student_id=student_id,
+            channel=channel,
+            registered_at=datetime.now(timezone.utc),
+            last_seen_at=datetime.now(timezone.utc),
+        )
+        db.add(student)
+        db.commit()
+        logger.info(f"Registered new student: {student_id[:12]}... channel={channel}")
+    else:
+        student.last_seen_at = datetime.now(timezone.utc)
+        db.commit()
+    return student
+
+
+def _get_or_create_session(db: Session, student_id: str) -> SessionRow:
+    """Get the student's active session or create a new one. FR-12: expire after 30 min."""
+    timeout = timedelta(minutes=settings.SESSION_TIMEOUT_MINUTES)
+    now = datetime.now(timezone.utc)
+
+    stmt = (
+        select(SessionRow)
+        .where(SessionRow.student_id == student_id, SessionRow.is_expired == False)  # noqa: E712
+        .order_by(SessionRow.last_active_at.desc())
+    )
+    active = db.scalars(stmt).first()
+
+    if active is not None:
+        last = active.last_active_at
+        if last.tzinfo is None:
+            last = last.replace(tzinfo=timezone.utc)
+        if now - last <= timeout:
+            return active
+        active.is_expired = True
+        db.commit()
+        logger.info(f"Session {active.session_id[:8]} expired for student {student_id[:12]}...")
+
+    new_session = SessionRow(
+        session_id=str(uuid.uuid4()),
+        student_id=student_id,
+        started_at=now,
+        last_active_at=now,
+        fsm_state=FSMState.GREETING.value,
+        current_difficulty="easy",
+        question_history=json.dumps([]),
+    )
+    db.add(new_session)
+
+    student = db.get(Student, student_id)
+    if student:
+        student.session_count = (student.session_count or 0) + 1
+
+    db.commit()
+    logger.info(f"Created new session {new_session.session_id[:8]} for student {student_id[:12]}...")
+    return new_session
+
+
+def _log_interaction(
+    db: Session,
+    session: SessionRow,
+    student_id: str,
+    channel: str,
+    fsm_state: FSMState,
+    student_response: str,
+    question_id: Optional[str],
+    evaluation_result: Optional[str],
+    llm_response_ms: int,
+    retrieval_score: float,
+) -> None:
+    """FR-35: log every interaction."""
+    interaction = Interaction(
+        interaction_id=str(uuid.uuid4()),
+        session_id=session.session_id,
+        student_id=student_id,
+        timestamp=datetime.now(timezone.utc),
+        channel=channel,
+        fsm_state=fsm_state.value,
+        question_id=question_id,
+        student_response=student_response,
+        evaluation_result=evaluation_result,
+        llm_response_ms=llm_response_ms,
+        retrieval_score=retrieval_score,
+    )
+    db.add(interaction)
+    db.commit()
+
+
+def _session_stats(db: Session, session_id: str) -> tuple[int, int]:
+    """Return (attempted, correct) counts for a session."""
+    row = db.execute(
+        select(
+            func.count(Interaction.interaction_id),
+            func.sum(case((Interaction.evaluation_result == "correct", 1), else_=0)),
+        ).where(
+            Interaction.session_id == session_id,
+            Interaction.question_id.is_not(None),
+        )
+    ).first()
+    attempted = row[0] or 0
+    correct = int(row[1] or 0)
+    return attempted, correct
+
+
+# ─── QUESTION HELPERS ─────────────────────────────────────────────────────────
+
+def _pick_next_question(db: Session, session: SessionRow, subject: str) -> Optional[dict]:
+    """
+    Pick the next practice question for the student.
+
+    Placeholder for Step 6 (Adaptive Engine). Uses direct ChromaDB metadata
+    lookup to get all questions for the subject at current difficulty, then
+    randomly selects one not already in the session history.
+    """
+    history = json.loads(session.question_history or "[]")
+    difficulty = session.current_difficulty or "easy"
+
+    candidates = [
+        q for q in get_by_subject(subject, difficulty=difficulty)
+        if q["question_id"] not in history
+    ]
+
+    # Fall back: any difficulty in this subject if nothing at target difficulty
+    if not candidates:
+        candidates = [
+            q for q in get_by_subject(subject)
+            if q["question_id"] not in history
+        ]
+
+    if not candidates:
+        return None
+
+    return random.choice(candidates)
+
+
+def _store_question_in_session(session: SessionRow, question: dict) -> None:
+    """Append question_id to session history; keep last N per config."""
+    history = json.loads(session.question_history or "[]")
+    history.append(question["question_id"])
+    history = history[-settings.QUESTION_HISTORY_LENGTH:]
+    session.question_history = json.dumps(history)
+    session.current_subject = question["subject"]
+
+
+def _get_current_question_meta(session: SessionRow) -> Optional[dict]:
+    """Return metadata for the most recently delivered question via direct ID lookup."""
+    history = json.loads(session.question_history or "[]")
+    if not history:
+        return None
+    return get_by_id(history[-1])
+
+
+# ─── MAIN ENTRY POINT ────────────────────────────────────────────────────────
+
+def handle_message(
+    db: Session,
+    student_id: str,
+    channel: str,
+    incoming_text: str,
+) -> DialogueResult:
+    """
+    Process one inbound student message through the FSM.
+
+    Returns a DialogueResult containing the response text, new state,
+    and metadata for logging.
+    """
+    student = _get_or_create_student(db, student_id, channel)
+    session = _get_or_create_session(db, student_id)
+
+    current_state = FSMState(session.fsm_state)
+    text = (incoming_text or "").strip()
+    text_upper = text.upper()
+
+    logger.info(
+        f"FSM | student={student_id[:12]}... state={current_state.value} input={text!r}"
+    )
+
+    # ─── GLOBAL COMMANDS (valid in any state) ─────────────────────────────
+    if text_upper in {"STOP", "QUIT", "EXIT"}:
+        session.is_expired = True
+        session.fsm_state = FSMState.GREETING.value
+        db.commit()
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, None, None, 0, 0.0)
+        return DialogueResult(
+            response=messages.farewell(),
+            new_state=FSMState.GREETING,
+            end_session=True,
+        )
+
+    if text_upper == "HELP":
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, None, None, 0, 0.0)
+        return DialogueResult(
+            response=messages.help_message(),
+            new_state=current_state,
+        )
+
+    if text_upper == "MENU":
+        session.fsm_state = FSMState.SUBJECT_SELECTION.value
+        session.last_active_at = datetime.now(timezone.utc)
+        db.commit()
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, None, None, 0, 0.0)
+        return DialogueResult(
+            response=messages.subject_selection_prompt(),
+            new_state=FSMState.SUBJECT_SELECTION,
+        )
+
+    if text_upper == "SCORE":
+        attempted, correct = _session_stats(db, session.session_id)
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, None, None, 0, 0.0)
+        return DialogueResult(
+            response=messages.session_summary(attempted, correct, None),
+            new_state=current_state,
+        )
+
+    # ─── STATE HANDLERS ───────────────────────────────────────────────────
+
+    if current_state == FSMState.GREETING:
+        session.fsm_state = FSMState.SUBJECT_SELECTION.value
+        session.last_active_at = datetime.now(timezone.utc)
+        db.commit()
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, None, None, 0, 0.0)
+        return DialogueResult(
+            response=messages.greeting(),
+            new_state=FSMState.SUBJECT_SELECTION,
+        )
+
+    if current_state == FSMState.SUBJECT_SELECTION:
+        subject_key = parse_subject(text)
+        if subject_key is None:
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=messages.subject_invalid(),
+                new_state=current_state,
+            )
+
+        question = _pick_next_question(db, session, subject_key)
+        if question is None:
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=messages.low_confidence_fallback(),
+                new_state=FSMState.SUBJECT_SELECTION,
+            )
+
+        _store_question_in_session(session, question)
+        session.fsm_state = FSMState.QUESTION_DELIVERY.value
+        session.last_active_at = datetime.now(timezone.utc)
+        db.commit()
+
+        response = (
+            messages.subject_confirmed(subject_key)
+            + "\n\n"
+            + messages.question_delivery(question["question_text"])
+        )
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, question["question_id"], None, 0, question["similarity"])
+        return DialogueResult(
+            response=response,
+            new_state=FSMState.QUESTION_DELIVERY,
+            question_id=question["question_id"],
+            retrieval_score=question["similarity"],
+        )
+
+    if current_state == FSMState.QUESTION_DELIVERY:
+        current_q = _get_current_question_meta(session)
+        if current_q is None:
+            session.fsm_state = FSMState.SUBJECT_SELECTION.value
+            db.commit()
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=messages.subject_selection_prompt(),
+                new_state=FSMState.SUBJECT_SELECTION,
+            )
+
+        evaluation = "skip" if text_upper == "SKIP" else evaluate_answer(text, current_q["correct_answer"])
+
+        verdict_map = {
+            "correct": messages.answer_correct(),
+            "partial": messages.answer_partial(),
+            "skip": messages.answer_skipped(),
+            "incorrect": messages.answer_incorrect(),
+        }
+        verdict = verdict_map.get(evaluation, messages.answer_incorrect())
+        explanation = messages.explanation_block(
+            correct_answer=current_q["correct_answer"],
+            explanation=current_q["explanation"],
+        )
+        response = f"{verdict}\n{explanation}\n\n{messages.next_action_prompt()}"
+
+        session.fsm_state = FSMState.EXPLANATION.value
+        session.last_active_at = datetime.now(timezone.utc)
+        db.commit()
+
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, current_q["question_id"], evaluation,
+                         0, current_q.get("similarity", 0.0))
+        return DialogueResult(
+            response=response,
+            new_state=FSMState.EXPLANATION,
+            question_id=current_q["question_id"],
+            evaluation_result=evaluation,
+            retrieval_score=current_q.get("similarity", 0.0),
+        )
+
+    if current_state == FSMState.EXPLANATION:
+        if text_upper in {"NEXT", ""}:
+            if not session.current_subject:
+                session.fsm_state = FSMState.SUBJECT_SELECTION.value
+                db.commit()
+                _log_interaction(db, session, student_id, channel, current_state,
+                                 text, None, None, 0, 0.0)
+                return DialogueResult(
+                    response=messages.subject_selection_prompt(),
+                    new_state=FSMState.SUBJECT_SELECTION,
+                )
+
+            question = _pick_next_question(db, session, session.current_subject)
+            if question is None:
+                attempted, correct = _session_stats(db, session.session_id)
+                session.fsm_state = FSMState.SESSION_SUMMARY.value
+                db.commit()
+                _log_interaction(db, session, student_id, channel, current_state,
+                                 text, None, None, 0, 0.0)
+                return DialogueResult(
+                    response=messages.session_summary(attempted, correct, session.current_subject),
+                    new_state=FSMState.SESSION_SUMMARY,
+                )
+
+            _store_question_in_session(session, question)
+            session.fsm_state = FSMState.QUESTION_DELIVERY.value
+            session.last_active_at = datetime.now(timezone.utc)
+            db.commit()
+
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, question["question_id"], None, 0, question["similarity"])
+            return DialogueResult(
+                response=messages.question_delivery(question["question_text"]),
+                new_state=FSMState.QUESTION_DELIVERY,
+                question_id=question["question_id"],
+                retrieval_score=question["similarity"],
+            )
+
+        # Unrecognised input in EXPLANATION — stay and re-prompt
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, None, None, 0, 0.0)
+        return DialogueResult(
+            response=messages.next_action_prompt(),
+            new_state=current_state,
+        )
+
+    if current_state == FSMState.SESSION_SUMMARY:
+        session.fsm_state = FSMState.SUBJECT_SELECTION.value
+        session.last_active_at = datetime.now(timezone.utc)
+        db.commit()
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, None, None, 0, 0.0)
+        return DialogueResult(
+            response=messages.subject_selection_prompt(),
+            new_state=FSMState.SUBJECT_SELECTION,
+        )
+
+    # Defensive fallback
+    logger.warning(f"Unhandled state {current_state} — resetting to GREETING")
+    session.fsm_state = FSMState.GREETING.value
+    db.commit()
+    return DialogueResult(
+        response=messages.fallback_unknown(),
+        new_state=FSMState.GREETING,
+    )

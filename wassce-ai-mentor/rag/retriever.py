@@ -94,6 +94,61 @@ def retrieve(
     return output
 
 
+def get_by_id(question_id: str) -> Optional[dict]:
+    """
+    Retrieve a single Q&A entry directly by its question_id.
+    Used by the FSM to look up the current question without semantic search.
+    """
+    collection = _get_collection()
+    results = collection.get(ids=[question_id], include=["metadatas"])
+    if not results or not results.get("ids") or not results["ids"]:
+        return None
+    meta = results["metadatas"][0]
+    return {
+        "question_id": meta["question_id"],
+        "subject": meta["subject"],
+        "topic": meta["topic"],
+        "difficulty": meta["difficulty"],
+        "question_text": meta["question_text"],
+        "correct_answer": meta["correct_answer"],
+        "explanation": meta["explanation"],
+        "similarity": 1.0,
+    }
+
+
+def get_by_subject(
+    subject: str,
+    difficulty: Optional[str] = None,
+) -> list[dict]:
+    """
+    Return all Q&A entries for a given subject (and optional difficulty level)
+    without any semantic ranking. Used by the FSM adaptive picker.
+    """
+    collection = _get_collection()
+    if difficulty:
+        where = {"$and": [{"subject": {"$eq": subject}}, {"difficulty": {"$eq": difficulty}}]}
+    else:
+        where = {"subject": {"$eq": subject}}
+
+    results = collection.get(where=where, include=["metadatas"])
+    if not results or not results.get("ids") or not results["ids"]:
+        return []
+
+    output = []
+    for meta in results["metadatas"]:
+        output.append({
+            "question_id": meta["question_id"],
+            "subject": meta["subject"],
+            "topic": meta["topic"],
+            "difficulty": meta["difficulty"],
+            "question_text": meta["question_text"],
+            "correct_answer": meta["correct_answer"],
+            "explanation": meta["explanation"],
+            "similarity": 1.0,
+        })
+    return output
+
+
 def retrieve_with_threshold(
     query: str,
     subject: Optional[str] = None,

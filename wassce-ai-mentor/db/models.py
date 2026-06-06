@@ -81,3 +81,7 @@ class TestAttempt(Base):
     responses: Mapped[str | None] = mapped_column(Text, nullable=True)
     total_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     subject_scores: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+# Alias to avoid clash with sqlalchemy.orm.Session in importing modules.
+SessionRow = Session
