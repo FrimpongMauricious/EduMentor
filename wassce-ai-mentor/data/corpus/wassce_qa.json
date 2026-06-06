@@ -1,0 +1,35 @@
+[
+  {
+    "question_id": "MATH-001",
+    "subject": "maths",
+    "topic": "algebra",
+    "difficulty": "easy",
+    "question_text": "Solve for x: 2x + 5 = 15",
+    "correct_answer": "x = 5",
+    "explanation": "Subtract 5 from both sides: 2x = 10. Divide both sides by 2: x = 5.",
+    "source": "WAEC",
+    "validated": true
+  },
+  {
+    "question_id": "ENG-001",
+    "subject": "english",
+    "topic": "comprehension",
+    "difficulty": "easy",
+    "question_text": "What is the plural of 'child'?",
+    "correct_answer": "children",
+    "explanation": "Child is an irregular noun. Its plural is children, not childs.",
+    "source": "WAEC",
+    "validated": true
+  },
+  {
+    "question_id": "SCI-001",
+    "subject": "science",
+    "topic": "biology",
+    "difficulty": "easy",
+    "question_text": "What is the powerhouse of the cell?",
+    "correct_answer": "Mitochondria",
+    "explanation": "The mitochondria produces ATP (adenosine triphosphate), the energy currency of the cell, through a process called cellular respiration.",
+    "source": "WAEC",
+    "validated": true
+  }
+]
