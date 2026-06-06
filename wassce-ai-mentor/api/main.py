@@ -1,12 +1,16 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from db.database import init_db
 from api.routes import whatsapp, ussd, health
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("WASSCE AI Mentor is running")
+    print("Starting WASSCE AI Mentor...")
+    init_db()
+    print("Database ready.")
     yield
+    print("Shutting down.")
 
 
 app = FastAPI(
