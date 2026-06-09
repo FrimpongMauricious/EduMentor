@@ -1,0 +1,76 @@
+services:
+  - type: web
+    name: wassce-ai-mentor-api
+    runtime: python
+    region: frankfurt
+    plan: free
+    branch: main
+    rootDir: .
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      python scripts/init_db.py
+      python scripts/ingest.py --reset
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        value: sqlite:////var/data/wassce_mentor.db
+      - key: CHROMA_PERSIST_DIR
+        value: /var/data/chroma_store
+      - key: CHROMA_COLLECTION_NAME
+        value: wassce_qa
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      # These must be set manually in Render's dashboard (sensitive secrets)
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_NUMBER
+        sync: false
+      - key: AT_USERNAME
+        sync: false
+      - key: AT_API_KEY
+        sync: false
+      - key: AT_SHORTCODE
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        sync: false
+      - key: DASHBOARD_PASSWORD
+        sync: false
+    disk:
+      name: wassce-data
+      mountPath: /var/data
+      sizeGB: 1
+
+  - type: web
+    name: wassce-ai-mentor-dashboard
+    runtime: python
+    region: frankfurt
+    plan: free
+    branch: main
+    rootDir: .
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: streamlit run dashboard/app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true --server.enableCORS false --server.enableXsrfProtection false
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        value: sqlite:////var/data/wassce_mentor.db
+      - key: CHROMA_PERSIST_DIR
+        value: /var/data/chroma_store
+      - key: CHROMA_COLLECTION_NAME
+        value: wassce_qa
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: DASHBOARD_PASSWORD
+        sync: false

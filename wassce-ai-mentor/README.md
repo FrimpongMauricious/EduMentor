@@ -64,10 +64,14 @@ pytest tests/
 python scripts/ingest.py
 ```
 
+## Deployment
+
+For production deployment to Render, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ## Project Info
 
 | Field | Detail |
-|---|---|
+| --- | --- |
 | **Group** | Group 2 |
 | **Project** | Project 7 |
 | **Department** | Computer Science |

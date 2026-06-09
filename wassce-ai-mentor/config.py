@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     QUESTION_HISTORY_LENGTH: int = 10
     DIFFICULTY_ADVANCE_THRESHOLD: float = 0.70
 
+    def is_production(self) -> bool:
+        return self.app_env.lower() == "production"
+
 
 @lru_cache()
 def get_settings() -> Settings:
