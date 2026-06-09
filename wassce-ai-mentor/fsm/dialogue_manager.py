@@ -21,6 +21,12 @@ from fsm.answer_evaluator import evaluate_answer
 from fsm import messages
 from rag.retriever import get_by_id
 from adaptive.engine import pick_next_question, update_performance, identify_weakest_subject
+from test_module.engine import (
+    start_test, get_active_test, get_current_question,
+    record_answer, format_test_results, has_completed_pretest,
+    has_completed_posttest, TOTAL_QUESTIONS,
+    is_current_question_shown, mark_question_shown, current_question_index,
+)
 from config import get_settings
 from utils.logger import get_logger
 
@@ -205,6 +211,11 @@ def handle_message(
 
     # ─── GLOBAL COMMANDS (valid in any state) ─────────────────────────────
     if text_upper in {"STOP", "QUIT", "EXIT"}:
+        # Cancel any in-progress test before ending session
+        active_test = get_active_test(db, student_id)
+        if active_test is not None:
+            db.delete(active_test)
+            db.commit()
         session.is_expired = True
         session.fsm_state = FSMState.GREETING.value
         db.commit()
@@ -242,6 +253,40 @@ def handle_message(
         return DialogueResult(
             response=messages.session_summary(attempted, correct, None),
             new_state=current_state,
+        )
+
+    if text_upper == "STARTTEST":
+        if has_completed_pretest(db, student_id) and has_completed_posttest(db, student_id):
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=messages.test_already_complete(),
+                new_state=current_state,
+            )
+
+        attempt = start_test(db, student_id)
+        session.fsm_state = FSMState.TEST_IN_PROGRESS.value
+        session.last_active_at = datetime.now(timezone.utc)
+        db.commit()
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, None, None, 0, 0.0)
+        return DialogueResult(
+            response=messages.test_intro(attempt.test_type, TOTAL_QUESTIONS),
+            new_state=FSMState.TEST_IN_PROGRESS,
+        )
+
+    if text_upper == "CANCEL" and current_state == FSMState.TEST_IN_PROGRESS:
+        active_test = get_active_test(db, student_id)
+        if active_test is not None:
+            db.delete(active_test)
+            db.commit()
+        session.fsm_state = FSMState.GREETING.value
+        db.commit()
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, None, None, 0, 0.0)
+        return DialogueResult(
+            response=messages.test_cancelled(),
+            new_state=FSMState.GREETING,
         )
 
     # ─── STATE HANDLERS ───────────────────────────────────────────────────
@@ -404,6 +449,67 @@ def handle_message(
         return DialogueResult(
             response=messages.subject_selection_prompt(),
             new_state=FSMState.SUBJECT_SELECTION,
+        )
+
+    if current_state == FSMState.TEST_IN_PROGRESS:
+        attempt = get_active_test(db, student_id)
+
+        # Defensive: no active attempt — reset to greeting
+        if attempt is None:
+            session.fsm_state = FSMState.GREETING.value
+            db.commit()
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=messages.greeting(),
+                new_state=FSMState.SUBJECT_SELECTION,
+            )
+
+        current_q = get_current_question(attempt)
+
+        # Current question not yet shown → student sent "ready" reply, display Q
+        if current_q is not None and not is_current_question_shown(attempt):
+            mark_question_shown(db, attempt)
+            qnum = current_question_index(attempt) + 1
+            response = messages.test_question(qnum, TOTAL_QUESTIONS, current_q["subject"], current_q["question_text"])
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, current_q["test_id"], None, 0, 0.0)
+            return DialogueResult(
+                response=response,
+                new_state=FSMState.TEST_IN_PROGRESS,
+                question_id=current_q["test_id"],
+            )
+
+        # Text is the student's answer to the current question
+        outcome = record_answer(db, attempt, text)
+
+        if outcome["finished"]:
+            db.refresh(attempt)
+            session.fsm_state = FSMState.GREETING.value
+            db.commit()
+            response = format_test_results(attempt)
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, current_q["test_id"] if current_q else None,
+                             outcome["result"], 0, 0.0)
+            return DialogueResult(
+                response=response,
+                new_state=FSMState.GREETING,
+                question_id=current_q["test_id"] if current_q else None,
+                evaluation_result=outcome["result"],
+            )
+
+        # Deliver the next question (mark it as shown immediately)
+        next_q = outcome["next_question"]
+        mark_question_shown(db, attempt)
+        qnum = current_question_index(attempt) + 1
+        response = messages.test_question(qnum, TOTAL_QUESTIONS, next_q["subject"], next_q["question_text"])
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, current_q["test_id"], outcome["result"], 0, 0.0)
+        return DialogueResult(
+            response=response,
+            new_state=FSMState.TEST_IN_PROGRESS,
+            question_id=next_q["test_id"],
+            evaluation_result=outcome["result"],
         )
 
     # Defensive fallback

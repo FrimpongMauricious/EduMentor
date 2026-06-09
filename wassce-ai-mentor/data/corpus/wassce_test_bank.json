@@ -1,0 +1,202 @@
+[
+  {
+    "test_id": "TEST-MATH-01",
+    "subject": "maths",
+    "topic": "algebra",
+    "difficulty": "easy",
+    "question_text": "Simplify: 3(x + 4) - 2x",
+    "correct_answer": "x + 12",
+    "explanation": "Expand 3(x + 4) = 3x + 12. Then 3x + 12 - 2x = x + 12.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-MATH-02",
+    "subject": "maths",
+    "topic": "arithmetic",
+    "difficulty": "easy",
+    "question_text": "What is 15% of 200?",
+    "correct_answer": "30",
+    "explanation": "15% of 200 = (15/100) × 200 = 30.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-MATH-03",
+    "subject": "maths",
+    "topic": "geometry",
+    "difficulty": "medium",
+    "question_text": "The perimeter of a rectangle is 30 cm. If the length is 9 cm, what is the width?",
+    "correct_answer": "6 cm",
+    "explanation": "Perimeter = 2(L + W). So 30 = 2(9 + W). 15 = 9 + W. W = 6 cm.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-MATH-04",
+    "subject": "maths",
+    "topic": "statistics",
+    "difficulty": "medium",
+    "question_text": "Find the median of: 3, 7, 2, 9, 5, 4, 8",
+    "correct_answer": "5",
+    "explanation": "Arrange in order: 2, 3, 4, 5, 7, 8, 9. The middle value is 5.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-MATH-05",
+    "subject": "maths",
+    "topic": "fractions",
+    "difficulty": "hard",
+    "question_text": "Simplify: 2/3 + 1/4",
+    "correct_answer": "11/12",
+    "explanation": "Common denominator is 12. 2/3 = 8/12. 1/4 = 3/12. 8/12 + 3/12 = 11/12.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-ENG-01",
+    "subject": "english",
+    "topic": "grammar",
+    "difficulty": "easy",
+    "question_text": "Choose the correct word: 'There ___ many students in the class.' (is / are)",
+    "correct_answer": "are",
+    "explanation": "'Students' is plural, so the verb must also be plural. 'Are' is the plural form.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-ENG-02",
+    "subject": "english",
+    "topic": "grammar",
+    "difficulty": "easy",
+    "question_text": "What is the past tense of 'go'?",
+    "correct_answer": "went",
+    "explanation": "'Go' is an irregular verb. Its past tense is 'went', not 'goed'.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-ENG-03",
+    "subject": "english",
+    "topic": "vocabulary",
+    "difficulty": "medium",
+    "question_text": "What is the opposite of 'expensive'?",
+    "correct_answer": "cheap",
+    "explanation": "The antonym (opposite) of 'expensive' is 'cheap' or 'inexpensive'.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-ENG-04",
+    "subject": "english",
+    "topic": "literature",
+    "difficulty": "medium",
+    "question_text": "What is a simile?",
+    "correct_answer": "A comparison using 'like' or 'as'",
+    "explanation": "A simile compares two things using 'like' or 'as'. Example: 'He is as brave as a lion.' This differs from a metaphor, which does not use 'like' or 'as'.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-ENG-05",
+    "subject": "english",
+    "topic": "punctuation",
+    "difficulty": "hard",
+    "question_text": "Which punctuation mark ends a question? (full stop / question mark / comma)",
+    "correct_answer": "question mark",
+    "explanation": "A question mark (?) is used at the end of a direct question. A full stop ends statements. A comma separates items in a list or clauses.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-SCI-01",
+    "subject": "science",
+    "topic": "biology",
+    "difficulty": "easy",
+    "question_text": "What organ pumps blood around the body?",
+    "correct_answer": "heart",
+    "explanation": "The heart is a muscular organ that pumps blood through the circulatory system, delivering oxygen and nutrients to body tissues.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-SCI-02",
+    "subject": "science",
+    "topic": "chemistry",
+    "difficulty": "easy",
+    "question_text": "What is the chemical formula for water?",
+    "correct_answer": "H2O",
+    "explanation": "Water is made of two hydrogen atoms and one oxygen atom, written as H2O.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-SCI-03",
+    "subject": "science",
+    "topic": "physics",
+    "difficulty": "medium",
+    "question_text": "What force pulls objects towards the Earth?",
+    "correct_answer": "gravity",
+    "explanation": "Gravity is the force of attraction between any two objects with mass. On Earth, it pulls all objects toward the centre of the planet.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-SCI-04",
+    "subject": "science",
+    "topic": "biology",
+    "difficulty": "medium",
+    "question_text": "What process do green plants use to make their own food?",
+    "correct_answer": "photosynthesis",
+    "explanation": "Photosynthesis is the process by which plants use sunlight, water, and carbon dioxide to produce glucose (food) and oxygen.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-SCI-05",
+    "subject": "science",
+    "topic": "physics",
+    "difficulty": "hard",
+    "question_text": "What is the SI unit of force?",
+    "correct_answer": "newton",
+    "explanation": "The SI (International System) unit of force is the Newton (N), named after Sir Isaac Newton. One newton is the force needed to accelerate one kilogram by one metre per second squared.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-SOC-01",
+    "subject": "social_studies",
+    "topic": "geography",
+    "difficulty": "easy",
+    "question_text": "How many regions does Ghana have? (as of 2019 restructuring)",
+    "correct_answer": "16",
+    "explanation": "After the 2019 referendum and restructuring, Ghana has 16 administrative regions, up from the previous 10.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-SOC-02",
+    "subject": "social_studies",
+    "topic": "history",
+    "difficulty": "easy",
+    "question_text": "Who was Ghana's first President?",
+    "correct_answer": "Kwame Nkrumah",
+    "explanation": "Dr. Kwame Nkrumah was the first President of Ghana after independence in 1957 and served until 1966.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-SOC-03",
+    "subject": "social_studies",
+    "topic": "government",
+    "difficulty": "medium",
+    "question_text": "What is the highest court in Ghana?",
+    "correct_answer": "Supreme Court",
+    "explanation": "The Supreme Court is the highest court in Ghana's judicial system, and its decisions are final and binding on all lower courts.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-SOC-04",
+    "subject": "social_studies",
+    "topic": "economics",
+    "difficulty": "medium",
+    "question_text": "What does GDP stand for?",
+    "correct_answer": "Gross Domestic Product",
+    "explanation": "GDP stands for Gross Domestic Product — the total monetary value of all goods and services produced in a country in a year. It is a key indicator of economic health.",
+    "marks": 1
+  },
+  {
+    "test_id": "TEST-SOC-05",
+    "subject": "social_studies",
+    "topic": "geography",
+    "difficulty": "hard",
+    "question_text": "What is the largest lake in Ghana?",
+    "correct_answer": "Lake Volta",
+    "explanation": "Lake Volta is the largest lake in Ghana and one of the largest artificial lakes in the world by surface area. It was created by damming the Volta River at Akosombo.",
+    "marks": 1
+  }
+]

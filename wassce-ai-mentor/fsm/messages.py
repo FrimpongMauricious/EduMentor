@@ -83,6 +83,7 @@ def help_message() -> str:
         "NEXT - next question\n"
         "MENU - change subject\n"
         "SCORE - session summary\n"
+        "STARTTEST - take the WASSCE test\n"
         "STOP - end session"
     )
 
@@ -107,3 +108,39 @@ def low_confidence_fallback() -> str:
         "I could not find a WASSCE question on that. "
         "Reply MENU to pick a subject."
     )
+
+
+def test_intro(test_type: str, total_questions: int) -> str:
+    label = "PRE-TEST" if test_type == "pre" else "POST-TEST"
+    return (
+        f"📝 {label} — {total_questions} questions\n"
+        f"5 per subject, no help, no skipping.\n"
+        f"Type your answer, then send.\n"
+        f"Type CANCEL to exit.\n\n"
+        f"Ready? Send any reply to begin."
+    )
+
+
+def test_question(qnum: int, total: int, subject: str, question_text: str) -> str:
+    subject_names = {
+        "maths": "Maths",
+        "english": "English",
+        "science": "Science",
+        "social_studies": "Social Studies",
+    }
+    return (
+        f"Q{qnum}/{total} [{subject_names.get(subject, subject)}]\n"
+        f"{question_text}\n\n"
+        f"Type your answer."
+    )
+
+
+def test_already_complete() -> str:
+    return (
+        "You have already completed both the pre-test and post-test. "
+        "Reply MENU to keep practising."
+    )
+
+
+def test_cancelled() -> str:
+    return "Test cancelled. Your progress was not saved.\nReply MENU to continue."
