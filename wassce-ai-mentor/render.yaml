@@ -37,9 +37,9 @@ services:
         sync: false
       - key: AT_SHORTCODE
         sync: false
-      - key: GROQ_API_KEY
+      - key: OPENAI_API_KEY
         sync: false
-      - key: GROQ_MODEL
+      - key: OPENAI_MODEL
         sync: false
       - key: DASHBOARD_PASSWORD
         sync: false

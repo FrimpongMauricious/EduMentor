@@ -19,9 +19,9 @@ class Settings(BaseSettings):
     at_api_key: str = ""
     at_shortcode: str = ""
 
-    # Groq LLM
-    groq_api_key: str = ""
-    groq_model: str = "llama3-8b-8192"
+    # OpenAI LLM
+    openai_api_key: str = ""
+    openai_model: str = "gpt-5.4-mini"
 
     # Database
     database_url: str = "sqlite:///./wassce_mentor.db"

@@ -1,11 +1,13 @@
 """
 rag/pipeline.py — Full RAG pipeline: retrieve + prompt + generate.
+LLM provider: OpenAI (gpt-5.4-mini by default). Falls back to retrieved-content
+formatter when OPENAI_API_KEY is not set.
 
 Implements FR-21, FR-22, FR-LLM-01, FR-LLM-02, FR-LLM-03, FR-LLM-04.
 """
 import time
 from typing import Optional
-from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from config import get_settings
 from rag.retriever import retrieve_with_threshold
@@ -14,13 +16,11 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 settings = get_settings()
 
-# Fallback message returned when no relevant content is retrieved (FR-22).
 FALLBACK_MESSAGE = (
     "I could not find a WASSCE question matching that topic. "
     "Please try asking about Maths, English, Science, or Social Studies."
 )
 
-# System prompt — per FR-LLM-02.
 SYSTEM_PROMPT_TEMPLATE = """You are the WASSCE AI Mentor, a tutor for senior high school students in Ghana preparing for the West African Senior School Certificate Examination (WASSCE).
 
 You will be given retrieved WASSCE Q&A material as context. Answer the student's question ONLY using this retrieved context. Do not invent facts or use outside knowledge.
@@ -54,15 +54,15 @@ def _build_prompt(query: str, retrieved: list[dict], max_chars: int) -> tuple[st
     return system, user
 
 
-def _get_llm() -> Optional[ChatGroq]:
-    """Initialise the Groq client. Returns None if no API key is configured."""
-    if not settings.groq_api_key:
-        logger.warning("GROQ_API_KEY not set — RAG pipeline will return retrieved content without LLM rephrasing.")
+def _get_llm() -> Optional[ChatOpenAI]:
+    """Initialise the OpenAI client. Returns None if no API key is configured."""
+    if not settings.openai_api_key:
+        logger.warning("OPENAI_API_KEY not set — RAG pipeline will return retrieved content without LLM rephrasing.")
         return None
 
-    return ChatGroq(
-        groq_api_key=settings.groq_api_key,
-        model_name=settings.groq_model,
+    return ChatOpenAI(
+        api_key=settings.openai_api_key,
+        model=settings.openai_model,
         temperature=0.3,
         max_tokens=400,
         timeout=12,
@@ -70,10 +70,7 @@ def _get_llm() -> Optional[ChatGroq]:
 
 
 def _format_without_llm(retrieved: list[dict], max_chars: int) -> str:
-    """
-    Fallback formatter when no Groq API key is available.
-    Used during development if GROQ_API_KEY is not set.
-    """
+    """Fallback formatter when no OpenAI API key is available."""
     top = retrieved[0]
     response = (
         f"Q: {top['question_text']}\n"
@@ -109,12 +106,11 @@ def answer_query(
     """
     max_chars = (
         settings.WHATSAPP_MAX_CHARS if channel == "whatsapp"
-        else settings.USSD_MAX_CHARS - len("CON ")  # reserve room for the USSD prefix
+        else settings.USSD_MAX_CHARS - len("CON ")
     )
 
     retrieved, is_grounded = retrieve_with_threshold(query, subject=subject, top_k=3)
 
-    # FR-22: fallback on no relevant content
     if not retrieved or not is_grounded:
         return {
             "response": FALLBACK_MESSAGE[:max_chars],
@@ -126,7 +122,6 @@ def answer_query(
 
     llm = _get_llm()
     if llm is None:
-        # Dev fallback: return retrieved content directly without LLM
         response_text = _format_without_llm(retrieved, max_chars)
         return {
             "response": response_text,
@@ -146,11 +141,10 @@ def answer_query(
         ])
         response_text = result.content.strip()
     except Exception as e:
-        logger.error(f"Groq LLM call failed: {e}")
+        logger.error(f"OpenAI LLM call failed: {e}")
         response_text = _format_without_llm(retrieved, max_chars)
     t_ms = int((time.time() - t0) * 1000)
 
-    # Hard cap to channel limit
     if len(response_text) > max_chars:
         response_text = response_text[: max_chars - 3] + "..."
 

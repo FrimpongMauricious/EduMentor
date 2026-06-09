@@ -5,7 +5,7 @@ A multi-channel RAG-based AI tutoring system for WASSCE candidates, accessible v
 ## Tech Stack
 
 - **FastAPI** — REST API and webhook endpoints
-- **LangChain + Groq (LLaMA 3)** — RAG pipeline and LLM inference
+- **LangChain + OpenAI (GPT-5.4-mini)** — RAG pipeline and LLM inference
 - **ChromaDB** — Vector store for WASSCE Q&A corpus
 - **sentence-transformers** — Local embeddings (all-MiniLM-L6-v2)
 - **Twilio** — WhatsApp channel

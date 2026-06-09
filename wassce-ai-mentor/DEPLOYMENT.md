@@ -8,7 +8,7 @@ This document describes how to deploy the WASSCE AI Mentor to Render free tier.
 - Render account: https://render.com (free, sign up with GitHub)
 - Twilio account with WhatsApp sandbox configured
 - Africa's Talking sandbox account with a USSD service code
-- (Optional) Groq API key for LLM responses
+- OpenAI API key for LLM responses
 - A free cron-job.org account for keep-alive pinging
 
 ## Step 1 — Create the API Web Service on Render
@@ -33,8 +33,8 @@ Go to **wassce-ai-mentor-api** -> **Environment**, and add these values:
 | AT_USERNAME | `sandbox` |
 | AT_API_KEY | From your AT Sandbox -> Settings -> API Key |
 | AT_SHORTCODE | `*384*25470#` |
-| GROQ_API_KEY | (optional, leave blank for dev fallback) |
-| GROQ_MODEL | `llama3-8b-8192` |
+| OPENAI_API_KEY | From your OpenAI Console |
+| OPENAI_MODEL | `gpt-5.4-mini` |
 | DASHBOARD_PASSWORD | A strong password — share only with the supervisor |
 
 Repeat the same DASHBOARD_PASSWORD for the **wassce-ai-mentor-dashboard** service.
