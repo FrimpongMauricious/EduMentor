@@ -100,3 +100,9 @@ The system is now live and ready for the pilot study.
 **Twilio signature validation fails:**
 - TWILIO_AUTH_TOKEN must match exactly what's in your Twilio Console.
 - Make sure the webhook URL in Twilio matches the Render URL exactly (https, no trailing slash).
+
+**Data resets on idle:**
+
+- Render free tier does not allow persistent disks. SQLite and ChromaDB are stored on ephemeral disk and reset after service spin-down or redeploy.
+- The corpus is automatically reloaded on every deploy via the buildCommand.
+- For long-term pilot data persistence, upgrade to a paid Render plan with persistent disk, OR migrate to PostgreSQL (Render offers a free PostgreSQL tier separately).

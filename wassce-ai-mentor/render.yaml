@@ -4,7 +4,7 @@ services:
     runtime: python
     region: frankfurt
     plan: free
-    branch: main
+    branch: master
     rootDir: .
     buildCommand: |
       pip install --upgrade pip
@@ -18,14 +18,13 @@ services:
       - key: APP_ENV
         value: production
       - key: DATABASE_URL
-        value: sqlite:////var/data/wassce_mentor.db
+        value: sqlite:///./wassce_mentor.db
       - key: CHROMA_PERSIST_DIR
-        value: /var/data/chroma_store
+        value: ./chroma_store
       - key: CHROMA_COLLECTION_NAME
         value: wassce_qa
       - key: PYTHON_VERSION
         value: "3.11.9"
-      # These must be set manually in Render's dashboard (sensitive secrets)
       - key: TWILIO_ACCOUNT_SID
         sync: false
       - key: TWILIO_AUTH_TOKEN
@@ -44,17 +43,13 @@ services:
         sync: false
       - key: DASHBOARD_PASSWORD
         sync: false
-    disk:
-      name: wassce-data
-      mountPath: /var/data
-      sizeGB: 1
 
   - type: web
     name: wassce-ai-mentor-dashboard
     runtime: python
     region: frankfurt
     plan: free
-    branch: main
+    branch: master
     rootDir: .
     buildCommand: |
       pip install --upgrade pip
@@ -65,9 +60,9 @@ services:
       - key: APP_ENV
         value: production
       - key: DATABASE_URL
-        value: sqlite:////var/data/wassce_mentor.db
+        value: sqlite:///./wassce_mentor.db
       - key: CHROMA_PERSIST_DIR
-        value: /var/data/chroma_store
+        value: ./chroma_store
       - key: CHROMA_COLLECTION_NAME
         value: wassce_qa
       - key: PYTHON_VERSION
