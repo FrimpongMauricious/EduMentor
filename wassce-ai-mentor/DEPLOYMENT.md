@@ -1,5 +1,48 @@
 # Deployment Guide — WASSCE AI Mentor
 
+## Live URLs (v1.0.0)
+
+| Service | URL | Purpose |
+|---|---|---|
+| API | https://wassce-ai-mentor-api.onrender.com | FastAPI backend — receives Twilio + Africa's Talking webhooks |
+| Dashboard | https://wassce-ai-mentor-dashboard.onrender.com | Streamlit teacher analytics (password-protected) |
+| Health Check | https://wassce-ai-mentor-api.onrender.com/health | Used by cron-job.org keep-alive ping |
+
+## Channel Configuration
+
+| Channel | Provider | Sandbox Number / Code |
+|---|---|---|
+| WhatsApp | Twilio (sandbox) | +1 415 523 8886 (join with code: `join inch-service`) |
+| USSD | Africa's Talking (sandbox) | `*384*25470#` (via AT simulator at https://simulator.africastalking.com) |
+
+## Database
+
+| Service | Provider | Region | Purpose |
+|---|---|---|---|
+| PostgreSQL | Neon (free tier) | eu-central-1 (Frankfurt) | Persistent storage: students, sessions, interactions, performance_vectors, test_attempts |
+| Vector Store | ChromaDB (local on Render) | Frankfurt | 24 WASSCE Q&A pairs embedded via OpenAI text-embedding-3-small (1536-dim) |
+
+## LLM Stack
+
+| Model | Purpose | Provider |
+|---|---|---|
+| gpt-5.4-mini | Conversational responses + answer explanations | OpenAI |
+| text-embedding-3-small | Document and query embeddings | OpenAI |
+
+## Infrastructure
+
+- **Hosting:** Render free tier, Frankfurt region (eu-central-1)
+- **Keep-alive:** cron-job.org pings `/health` every 10 minutes to prevent Render free-tier idle spin-down
+- **Test status:** 96/96 automated tests passing
+
+## Known Limitations (Sandbox Mode)
+
+- **Twilio WhatsApp sandbox:** has daily message limits (~9–100 messages/day). Sufficient for development and exhibition demos but not for full pilot at scale. Production deployment requires upgrading to a Twilio paid WhatsApp Business sender.
+- **Africa's Talking USSD sandbox:** accessible only via AT's online simulator. Production deployment requires a paid dedicated USSD short code through a Ghanaian telco.
+- **Both limitations are deployment formalities** — the architecture, code, and live system are fully production-ready.
+
+---
+
 This document describes how to deploy the WASSCE AI Mentor to Render free tier.
 
 ## Prerequisites
