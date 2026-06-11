@@ -16,15 +16,12 @@ import os
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from sqlalchemy import create_engine
 
 try:
     from config import get_settings
     _s = get_settings()
-    _DB_URL = _s.database_url
     _DASHBOARD_PASSWORD = _s.dashboard_password
 except Exception:
-    _DB_URL = os.getenv("DATABASE_URL", "sqlite:///./wassce_mentor.db")
     _DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "changeme")
 
 from dashboard.queries import (
@@ -53,7 +50,8 @@ st.set_page_config(
 
 @st.cache_resource
 def _get_engine():
-    return create_engine(_DB_URL, connect_args={"check_same_thread": False})
+    from db.database import engine
+    return engine
 
 
 # ── Password gate ──────────────────────────────────────────────────────────────
