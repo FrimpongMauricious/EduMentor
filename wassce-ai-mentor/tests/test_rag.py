@@ -15,14 +15,14 @@ class TestEmbeddings:
     def test_embed_text_returns_384_dims(self):
         v = embed_text("Solve for x: 2x + 5 = 15")
         assert isinstance(v, list)
-        assert len(v) == 384
+        assert len(v) == 1536
         assert all(isinstance(x, float) for x in v)
 
     def test_embed_batch_returns_correct_shape(self):
         texts = ["Hello", "Photosynthesis", "Algebra"]
         vectors = embed_batch(texts)
         assert len(vectors) == 3
-        assert all(len(v) == 384 for v in vectors)
+        assert all(len(v) == 1536 for v in vectors)
 
     def test_similar_queries_have_similar_embeddings(self):
         import numpy as np
