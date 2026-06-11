@@ -18,7 +18,7 @@ services:
       - key: APP_ENV
         value: production
       - key: DATABASE_URL
-        value: sqlite:///./wassce_mentor.db
+        sync: false
       - key: CHROMA_PERSIST_DIR
         value: ./chroma_store
       - key: CHROMA_COLLECTION_NAME
@@ -60,7 +60,7 @@ services:
       - key: APP_ENV
         value: production
       - key: DATABASE_URL
-        value: sqlite:///./wassce_mentor.db
+        sync: false
       - key: CHROMA_PERSIST_DIR
         value: ./chroma_store
       - key: CHROMA_COLLECTION_NAME
