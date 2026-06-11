@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest tests/test_dashboard.py -v --tb=short)",
+      "Bash(streamlit run *)",
+      "Bash(curl -s http://localhost:8501)",
+      "Bash(python -m pytest tests/ --tb=short -q)",
+      "Bash(curl -s http://localhost:8501/healthz)",
+      "Bash(python -m streamlit run dashboard/app.py --server.port 8501 --server.headless true)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('API OK:', d['status']\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8501)",
+      "Bash(python -c \"import playwright; print\\('playwright ok'\\)\")",
+      "Bash(python -m pip install playwright --quiet)",
+      "Bash(python -m playwright install chromium --quiet)",
+      "Bash(python -c \"from playwright.sync_api import sync_playwright; print\\('playwright available'\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(python -)",
+      "Bash(python -m pytest tests/ -q --tb=short)",
+      "Bash(pip install *)",
+      "Bash(.venv\\\\Scripts\\\\pip uninstall *)",
+      "Bash(.venv\\\\Scripts\\\\pip install *)",
+      "Read(//c/Users/USER/Desktop/EduMentor/**)"
+    ]
+  }
+}
