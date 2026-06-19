@@ -19,6 +19,7 @@ from db.models import Student, SessionRow, Interaction
 from fsm.states import FSMState, parse_subject
 from fsm.answer_evaluator import evaluate_answer
 from fsm import messages
+from rag.grader import grade_answer
 from rag.retriever import get_by_id
 from adaptive.engine import pick_next_question, update_performance, identify_weakest_subject
 from test_module.engine import (
@@ -352,7 +353,49 @@ def handle_message(
                 new_state=FSMState.SUBJECT_SELECTION,
             )
 
-        evaluation = "skip" if text_upper == "SKIP" else evaluate_answer(text, current_q["correct_answer"])
+        correct_ans = current_q["correct_answer"]
+        expl_text = current_q["explanation"]
+
+        if text_upper == "SKIP":
+            evaluation = "skip"
+            response = (
+                f"{messages.answer_skipped()}\n"
+                f"{messages.explanation_block(correct_ans, expl_text)}\n\n"
+                f"{messages.next_action_prompt()}"
+            )
+        else:
+            grade = grade_answer(
+                current_q["question_text"],
+                text,
+                correct_ans,
+                current_q.get("question_type"),
+            )
+            score = grade["score"]
+            is_correct = grade["is_correct"]
+            feedback = grade.get("feedback", "")
+
+            if score >= 60:
+                evaluation = "correct"
+            elif score > 0:
+                evaluation = "partial"
+            else:
+                evaluation = "incorrect"
+
+            if is_correct and score == 100:
+                verdict = "Correct! Well done."
+            elif is_correct:
+                verdict = f"Good attempt! Score: {score}%\n{feedback}"
+            elif score > 0:
+                verdict = f"Not quite. Score: {score}%\n{feedback}"
+            else:
+                verdict = "Not quite. Here is the correct answer:"
+
+            response = (
+                f"{verdict}\n"
+                f"Answer: {correct_ans}\n"
+                f"Why: {expl_text}\n\n"
+                f"{messages.next_action_prompt()}"
+            )
 
         # FR-26: update performance vector (skip counts as incorrect for tracking purposes)
         counted_correct = evaluation in {"correct", "partial"}
@@ -364,19 +407,6 @@ def handle_message(
             difficulty=current_q["difficulty"],
             correct=counted_correct,
         )
-
-        verdict_map = {
-            "correct": messages.answer_correct(),
-            "partial": messages.answer_partial(),
-            "skip": messages.answer_skipped(),
-            "incorrect": messages.answer_incorrect(),
-        }
-        verdict = verdict_map.get(evaluation, messages.answer_incorrect())
-        explanation = messages.explanation_block(
-            correct_answer=current_q["correct_answer"],
-            explanation=current_q["explanation"],
-        )
-        response = f"{verdict}\n{explanation}\n\n{messages.next_action_prompt()}"
 
         session.fsm_state = FSMState.EXPLANATION.value
         session.last_active_at = datetime.now(timezone.utc)
