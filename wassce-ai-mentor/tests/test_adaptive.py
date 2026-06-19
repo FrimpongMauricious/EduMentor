@@ -184,7 +184,10 @@ class TestPickNextQuestion:
     def test_returns_none_when_corpus_exhausted(self, db):
         sid = _make_student(db)
         s = _make_session(db, sid)
-        for qid in ["MATH-001", "MATH-002", "MATH-003", "MATH-004", "MATH-005", "MATH-006"]:
+        # Fetch the actual candidate pool the engine uses, then mark all as answered
+        from rag.retriever import retrieve
+        candidates = retrieve("maths easy practice question", subject="maths", top_k=20)
+        for c in candidates:
             db.add(Interaction(
                 interaction_id=str(uuid.uuid4()),
                 session_id=s.session_id,
@@ -192,7 +195,7 @@ class TestPickNextQuestion:
                 timestamp=datetime.now(timezone.utc),
                 channel="whatsapp",
                 fsm_state="QUESTION_DELIVERY",
-                question_id=qid,
+                question_id=c["question_id"],
                 evaluation_result="correct",
             ))
         db.commit()
