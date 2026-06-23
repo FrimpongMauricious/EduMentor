@@ -2274,7 +2274,7 @@
     "correct_answer": "B. brief",
     "explanation": "Concise means short and clear, using few words. 'Brief' is the closest synonym. Lengthy is the opposite.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-002",
@@ -2285,7 +2285,7 @@
     "correct_answer": "A. lazy",
     "explanation": "Diligent means showing care and effort in work. Its opposite is 'lazy' (showing no effort).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-003",
@@ -2296,7 +2296,7 @@
     "correct_answer": "B. honest",
     "explanation": "Candid means frank and open. The closest synonym is 'honest'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-004",
@@ -2307,7 +2307,7 @@
     "correct_answer": "C. sensible",
     "explanation": "Absurd means ridiculous or contrary to reason. Its opposite is 'sensible' (reasonable).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-005",
@@ -2318,7 +2318,7 @@
     "correct_answer": "B. blocked",
     "explanation": "Impassable means impossible to travel along or over. 'Blocked' captures this meaning best.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-006",
@@ -2329,7 +2329,7 @@
     "correct_answer": "B. on",
     "explanation": "We 'congratulate someone ON something' (success, achievement). 'For' is used with verbs like 'thank'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-007",
@@ -2340,7 +2340,7 @@
     "correct_answer": "A. with",
     "explanation": "We are 'angry WITH someone' but 'angry AT something'. Since brother is a person: 'angry with'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-008",
@@ -2351,7 +2351,7 @@
     "correct_answer": "B. Although",
     "explanation": "The sentence contrasts being tired with continuing — 'although' (despite) is the correct conjunction.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-009",
@@ -2362,7 +2362,7 @@
     "correct_answer": "B. will have written",
     "explanation": "Future perfect tense ('will have + past participle') is used for actions that will be completed before a specific future time.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-010",
@@ -2373,7 +2373,7 @@
     "correct_answer": "C. were",
     "explanation": "In the second conditional (unreal/hypothetical present), we use 'were' for all subjects (subjunctive mood): 'If I were rich...'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-011",
@@ -2384,7 +2384,7 @@
     "correct_answer": "B. wears",
     "explanation": "'Each' is a singular subject, so it takes a singular verb 'wears'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-012",
@@ -2395,7 +2395,7 @@
     "correct_answer": "B. is",
     "explanation": "Though 'news' looks plural, it is an uncountable noun and takes a singular verb: 'The news IS shocking.'",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-013",
@@ -2406,7 +2406,7 @@
     "correct_answer": "C. to",
     "explanation": "We say 'married TO someone'. 'With' is used in some other languages but not standard English.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-014",
@@ -2417,7 +2417,7 @@
     "correct_answer": "B. an",
     "explanation": "Use 'an' before words beginning with a vowel SOUND. 'Honest' starts with a silent 'h', so the next sound is 'o' — a vowel sound. Use 'an'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-015",
@@ -2428,7 +2428,7 @@
     "correct_answer": "B. me",
     "explanation": "After a preposition ('between'), we use object pronouns. The correct form is 'me', not 'I'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-016",
@@ -2439,7 +2439,7 @@
     "correct_answer": "B. He was stealing public funds.",
     "explanation": "'Hands in the till' is an idiom meaning to steal money, especially from one's employer or organization.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-017",
@@ -2450,7 +2450,7 @@
     "correct_answer": "B. He revealed a secret.",
     "explanation": "'Let the cat out of the bag' means to reveal a secret, especially accidentally or carelessly.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-018",
@@ -2461,7 +2461,7 @@
     "correct_answer": "B. very happy and lively",
     "explanation": "'In high spirits' means cheerful, lively, and full of energy.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-019",
@@ -2472,7 +2472,7 @@
     "correct_answer": "C. faced an unexpected problem",
     "explanation": "'Hit a snag' means to encounter an unexpected obstacle or problem.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-020",
@@ -2483,7 +2483,7 @@
     "correct_answer": "A. avoiding the main point",
     "explanation": "'Beating about the bush' means avoiding the main topic or speaking indirectly.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-021",
@@ -2494,7 +2494,7 @@
     "correct_answer": "A. The prize was given to the best student by the headmaster.",
     "explanation": "In passive voice, the object becomes the subject: 'The prize (object) was given... by the headmaster (agent).'",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-022",
@@ -2505,7 +2505,7 @@
     "correct_answer": "B. He said that he was going home then.",
     "explanation": "In reported speech: 'am' → 'was', 'now' → 'then'. So 'I am going home now' becomes 'he was going home then'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-023",
@@ -2516,7 +2516,7 @@
     "correct_answer": "B. aren't you",
     "explanation": "For positive statements, we use a negative tag with the same auxiliary verb. 'You are' → 'aren't you'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-024",
@@ -2527,7 +2527,7 @@
     "correct_answer": "A. should",
     "explanation": "'Should' expresses advice or strong recommendation, which fits the safety context.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-025",
@@ -2538,7 +2538,7 @@
     "correct_answer": "B. would have",
     "explanation": "Third conditional structure: 'If + past perfect, would have + past participle'. This expresses unreal past.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-026",
@@ -2549,7 +2549,7 @@
     "correct_answer": "B. Climate change is a major global threat.",
     "explanation": "The first sentence states this directly: 'Climate change poses one of the greatest threats to humanity.' All other details support this main idea.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-027",
@@ -2560,7 +2560,7 @@
     "correct_answer": "D. Economic growth",
     "explanation": "The passage mentions food security, water resources, and human health. Economic growth is not directly mentioned.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-028",
@@ -2571,7 +2571,7 @@
     "correct_answer": "B. extreme",
     "explanation": "'Severe' in this context means 'very intense' or 'extreme'. The other options don't fit weather events that are 'increasingly bad'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-029",
@@ -2582,7 +2582,7 @@
     "correct_answer": "B. persistent",
     "explanation": "Tenacious means holding firmly; persistent and determined. The closest synonym is 'persistent'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-030",
@@ -2593,7 +2593,7 @@
     "correct_answer": "B. modest",
     "explanation": "Extravagant means lavish, excessive, or wasteful in spending. Its opposite is 'modest' (restrained, not excessive).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-031",
@@ -2604,7 +2604,7 @@
     "correct_answer": "B. showy",
     "explanation": "Ostentatious means designed to impress others; pretentious or showy. Closest synonym is 'showy'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-032",
@@ -2615,7 +2615,7 @@
     "correct_answer": "B. The Volta Lake is a man-made lake in Ghana with multiple benefits.",
     "explanation": "A good summary captures the main idea (man-made lake) and key benefits (electricity, irrigation, fishing, transport). Option B does this.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-033",
@@ -2626,7 +2626,7 @@
     "correct_answer": "D. Footnotes",
     "explanation": "A standard essay has an introduction, body paragraphs, and conclusion. Footnotes are used in academic papers, not in standard essays.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-034",
@@ -2637,7 +2637,7 @@
     "correct_answer": "B. A direct comparison without 'like' or 'as'",
     "explanation": "Metaphor: direct comparison (e.g., 'Time is money'). Simile uses 'like' or 'as'. Repetition is another device; exaggeration is hyperbole.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-035",
@@ -2648,7 +2648,7 @@
     "correct_answer": "B. A comparison using 'like' or 'as'",
     "explanation": "A simile compares two unlike things using 'like' or 'as' (e.g., 'brave as a lion'). It's distinct from metaphor.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-036",
@@ -2659,7 +2659,7 @@
     "correct_answer": "A. off",
     "explanation": "'Put off' means to postpone or delay. The meeting was postponed due to weather.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-037",
@@ -2670,7 +2670,7 @@
     "correct_answer": "B. into",
     "explanation": "'Look into' means to investigate. The police are investigating the matter.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-038",
@@ -2681,7 +2681,7 @@
     "correct_answer": "A. that",
     "explanation": "When defining 'the book' specifically, 'that' is the correct relative pronoun (restrictive clause).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-039",
@@ -2692,7 +2692,7 @@
     "correct_answer": "A. more difficult",
     "explanation": "Comparative form of 'difficult' is 'more difficult'. 'More' is used for adjectives with 3+ syllables.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-040",
@@ -2703,7 +2703,7 @@
     "correct_answer": "B. Unless",
     "explanation": "'Unless' means 'if not'. 'Unless you study hard' = 'If you don't study hard'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-041",
@@ -2714,7 +2714,7 @@
     "correct_answer": "B. kind",
     "explanation": "Benevolent means kind, generous, and well-meaning. Synonym is 'kind'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-042",
@@ -2725,7 +2725,7 @@
     "correct_answer": "B. pessimistic",
     "explanation": "Optimistic = hopeful about future outcomes. Its opposite is 'pessimistic' = expecting bad outcomes.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-043",
@@ -2736,7 +2736,7 @@
     "correct_answer": "B. begin",
     "explanation": "Initiate means to start or begin something (e.g., initiate a project). Synonym is 'begin'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-044",
@@ -2747,7 +2747,7 @@
     "correct_answer": "B. reading",
     "explanation": "After 'enjoy', we use the gerund (-ing form): 'enjoys reading'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-045",
@@ -2758,7 +2758,7 @@
     "correct_answer": "C. to be",
     "explanation": "After 'want', we use the infinitive (to + base verb): 'want to be'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-046",
@@ -2769,7 +2769,7 @@
     "correct_answer": "B. at",
     "explanation": "We say 'good AT' a subject or skill (good at maths, good at football). Note: 'good in' is sometimes used informally but 'at' is standard.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-047",
@@ -2780,7 +2780,7 @@
     "correct_answer": "B. on",
     "explanation": "For surfaces (like a table), we use 'on'. 'In' is for enclosed spaces; 'at' is for points; 'by' means beside.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-048",
@@ -2791,7 +2791,7 @@
     "correct_answer": "B. raining very heavily",
     "explanation": "'Raining cats and dogs' is an idiom meaning to rain very heavily.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-049",
@@ -2802,7 +2802,7 @@
     "correct_answer": "B. Don't make plans based on what hasn't happened yet.",
     "explanation": "This idiom warns against making plans based on something that hasn't happened or may not happen.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-W2025-050",
@@ -2813,7 +2813,7 @@
     "correct_answer": "B. He dealt with the problem head-on.",
     "explanation": "'Take the bull by the horns' means to deal with a difficult or dangerous situation directly and bravely.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-051",
@@ -2824,7 +2824,7 @@
     "correct_answer": "B. fast",
     "explanation": "Rapid means moving with great speed. The closest synonym is 'fast'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-052",
@@ -2835,7 +2835,7 @@
     "correct_answer": "B. careful",
     "explanation": "Meticulous means showing great attention to detail; very careful and precise.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-053",
@@ -2846,7 +2846,7 @@
     "correct_answer": "B. short-lived",
     "explanation": "Ephemeral means lasting for a very short time; transient or fleeting.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-054",
@@ -2857,7 +2857,7 @@
     "correct_answer": "B. unclear",
     "explanation": "Ambiguous means open to more than one interpretation; not having one obvious meaning.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-055",
@@ -2868,7 +2868,7 @@
     "correct_answer": "B. hide",
     "explanation": "Conceal means to keep something secret or out of sight; to hide.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-056",
@@ -2879,7 +2879,7 @@
     "correct_answer": "B. huge",
     "explanation": "Enormous means very large in size, quantity, or extent. Synonym: huge.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-057",
@@ -2890,7 +2890,7 @@
     "correct_answer": "B. wealthy",
     "explanation": "Affluent means having an abundance of wealth; rich.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-058",
@@ -2901,7 +2901,7 @@
     "correct_answer": "B. sociable",
     "explanation": "Gregarious means fond of the company of others; sociable.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-059",
@@ -2912,7 +2912,7 @@
     "correct_answer": "A. famous",
     "explanation": "Eminent means famous and respected within a particular sphere.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-060",
@@ -2923,7 +2923,7 @@
     "correct_answer": "B. skilled",
     "explanation": "Proficient means competent or skilled in doing or using something.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-061",
@@ -2934,7 +2934,7 @@
     "correct_answer": "B. modern",
     "explanation": "Ancient means belonging to the very distant past. Its opposite is 'modern' (of the present time).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-062",
@@ -2945,7 +2945,7 @@
     "correct_answer": "B. stingy",
     "explanation": "Generous means giving freely. Its opposite is 'stingy' (unwilling to spend or give).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-063",
@@ -2956,7 +2956,7 @@
     "correct_answer": "B. bold",
     "explanation": "Timid means lacking in courage. Its opposite is 'bold' (showing courage and confidence).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-064",
@@ -2967,7 +2967,7 @@
     "correct_answer": "C. end",
     "explanation": "Commence means to begin. Its opposite is 'end' (to finish or conclude).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-065",
@@ -2978,7 +2978,7 @@
     "correct_answer": "B. abundant",
     "explanation": "Scarce means insufficient or in short supply. Its opposite is 'abundant' (existing in large quantities).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-066",
@@ -2989,7 +2989,7 @@
     "correct_answer": "B. profound",
     "explanation": "Superficial means existing only at the surface; not thorough. Its opposite is 'profound' (deep and thoughtful).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-067",
@@ -3000,7 +3000,7 @@
     "correct_answer": "B. fake",
     "explanation": "Genuine means truly what it is said to be; authentic. Its opposite is 'fake' (not genuine).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-068",
@@ -3011,7 +3011,7 @@
     "correct_answer": "B. cowardly",
     "explanation": "Brave means ready to face danger. Its opposite is 'cowardly' (showing a lack of courage).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-069",
@@ -3022,7 +3022,7 @@
     "correct_answer": "B. opaque",
     "explanation": "Transparent means see-through. Its opposite is 'opaque' (not transparent; cannot be seen through).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-070",
@@ -3033,7 +3033,7 @@
     "correct_answer": "B. optional",
     "explanation": "Compulsory means required by law or rule; mandatory. Its opposite is 'optional' (available as a choice).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-071",
@@ -3044,7 +3044,7 @@
     "correct_answer": "C. will have finished",
     "explanation": "Future perfect tense is used for an action completed before a specific future time. 'By the time + future action' triggers this structure.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-072",
@@ -3055,7 +3055,7 @@
     "correct_answer": "B. goes",
     "explanation": "Simple present tense for habits/routines. Third-person singular adds -s/-es: 'she goes'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-073",
@@ -3066,7 +3066,7 @@
     "correct_answer": "B. was",
     "explanation": "Past continuous interrupted by past simple: 'I was [doing something] when X happened'. 'I' takes 'was'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-074",
@@ -3077,7 +3077,7 @@
     "correct_answer": "C. have known",
     "explanation": "Present perfect tense ('have/has + past participle') for an action that started in the past and continues to the present. 'Since 2010' triggers it.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-075",
@@ -3088,7 +3088,7 @@
     "correct_answer": "B. would have caught",
     "explanation": "Third conditional (unreal past): 'If + past perfect, would have + past participle'. The condition is impossible to change now.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-076",
@@ -3099,7 +3099,7 @@
     "correct_answer": "B. was sent",
     "explanation": "Past simple passive: action completed at a specific time in the past ('yesterday') uses 'was/were + past participle'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-077",
@@ -3110,7 +3110,7 @@
     "correct_answer": "C. were",
     "explanation": "'Wish + past subjunctive' for unreal/hypothetical present. Use 'were' for all subjects in the subjunctive.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-078",
@@ -3121,7 +3121,7 @@
     "correct_answer": "C. are playing",
     "explanation": "Present continuous tense for actions happening at the moment of speaking. 'Now' is the time marker.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-079",
@@ -3132,7 +3132,7 @@
     "correct_answer": "A. on",
     "explanation": "Use 'on' before specific days of the week (on Monday, on Friday).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-080",
@@ -3143,7 +3143,7 @@
     "correct_answer": "A. in",
     "explanation": "Use 'in' for arrival at cities, countries, large areas. 'At' is for specific points.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-081",
@@ -3154,7 +3154,7 @@
     "correct_answer": "A. for",
     "explanation": "We say 'preparing FOR' something — 'preparing for an exam', 'preparing for a journey'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-082",
@@ -3165,7 +3165,7 @@
     "correct_answer": "B. of",
     "explanation": "We say 'afraid OF' something — afraid of snakes, afraid of the dark.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-083",
@@ -3176,7 +3176,7 @@
     "correct_answer": "B. of",
     "explanation": "We say 'fond OF' something — fond of music, fond of chocolate.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-084",
@@ -3187,7 +3187,7 @@
     "correct_answer": "C. of",
     "explanation": "We say 'consists OF' (NOT 'consists from' or 'consists with'). It's a fixed verb-preposition pair.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-085",
@@ -3198,7 +3198,7 @@
     "correct_answer": "A. between",
     "explanation": "Use 'between' for TWO objects. Use 'among' for THREE or more.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-086",
@@ -3209,7 +3209,7 @@
     "correct_answer": "B. of",
     "explanation": "We say 'accused OF' a crime. 'Charged WITH' is the related variant — but the direct phrasing uses 'of'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-087",
@@ -3220,7 +3220,7 @@
     "correct_answer": "A. know",
     "explanation": "With 'either/or' and 'neither/nor', the verb agrees with the SUBJECT CLOSEST to it. 'Brothers' is plural, so 'know'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-088",
@@ -3231,7 +3231,7 @@
     "correct_answer": "A. is",
     "explanation": "Collective nouns like 'team', 'family', 'group' usually take a singular verb in standard English.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-089",
@@ -3242,7 +3242,7 @@
     "correct_answer": "B. are",
     "explanation": "'Trousers' is always plural in English (like 'jeans', 'scissors', 'glasses'). Use plural verb 'are'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-090",
@@ -3253,7 +3253,7 @@
     "correct_answer": "B. are",
     "explanation": "When 'none' refers to people or countable items, modern usage prefers the plural verb. 'None of the students are absent'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-091",
@@ -3264,7 +3264,7 @@
     "correct_answer": "B. is",
     "explanation": "Subjects ending in -s like 'mathematics', 'physics', 'economics' look plural but are singular. Use 'is'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-092",
@@ -3275,7 +3275,7 @@
     "correct_answer": "A. very similar",
     "explanation": "'Like two peas in a pod' means very similar in appearance or character.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-093",
@@ -3286,7 +3286,7 @@
     "correct_answer": "C. has all the advantages",
     "explanation": "'The best of both worlds' means having the advantages of two different things at the same time.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-094",
@@ -3297,7 +3297,7 @@
     "correct_answer": "B. very unclear",
     "explanation": "'As clear as mud' is sarcastic — it means very confusing or hard to understand.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-095",
@@ -3308,7 +3308,7 @@
     "correct_answer": "A. an extra good thing",
     "explanation": "'Icing on the cake' means an additional benefit that makes a good situation even better.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-096",
@@ -3319,7 +3319,7 @@
     "correct_answer": "B. Don't harm those who help you.",
     "explanation": "This idiom warns against harming or being ungrateful to those who provide for your needs.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-097",
@@ -3330,7 +3330,7 @@
     "correct_answer": "A. You must make the next move.",
     "explanation": "'The ball is in your court' means it's your turn to take action or make a decision.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-098",
@@ -3341,7 +3341,7 @@
     "correct_answer": "B. He resigned or gave up.",
     "explanation": "'Throw in the towel' (from boxing) means to admit defeat or quit.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-099",
@@ -3352,7 +3352,7 @@
     "correct_answer": "C. eased the tension at the start",
     "explanation": "'Break the ice' means to relieve initial tension or awkwardness in a social situation.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-100",
@@ -3363,7 +3363,7 @@
     "correct_answer": "A. very easy",
     "explanation": "'A piece of cake' is an idiom meaning very easy to do.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-101",
@@ -3374,7 +3374,7 @@
     "correct_answer": "B. extremely happy",
     "explanation": "'On cloud nine' means extremely happy or in a state of bliss.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-102",
@@ -3385,7 +3385,7 @@
     "correct_answer": "A. broke out",
     "explanation": "'Break out' means to start suddenly (used for fires, war, disease). 'Break down' = stop working; 'break up' = end a relationship.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-103",
@@ -3396,7 +3396,7 @@
     "correct_answer": "A. turn off",
     "explanation": "'Turn off' means to switch off (lights, electronics). 'Turn out' = to appear/result; 'turn over' = to flip.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-104",
@@ -3407,7 +3407,7 @@
     "correct_answer": "B. set up",
     "explanation": "'Set up' means to arrange or organise (a meeting, a business). 'Give up' = quit; 'break up' = end.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-105",
@@ -3418,7 +3418,7 @@
     "correct_answer": "A. call ... up",
     "explanation": "'Call up' means to telephone someone. 'Call off' = cancel; 'call over' = invite to come.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-106",
@@ -3429,7 +3429,7 @@
     "correct_answer": "A. took off",
     "explanation": "'Take off' (for planes) means to leave the ground. 'Take over' = assume control; 'take up' = start a hobby.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-107",
@@ -3440,7 +3440,7 @@
     "correct_answer": "A. gave up",
     "explanation": "'Give up' means to stop doing something. 'Give in' = surrender; 'give out' = distribute; 'give away' = donate.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-108",
@@ -3451,7 +3451,7 @@
     "correct_answer": "A. put off",
     "explanation": "'Put off' means to postpone. 'Put on' = wear; 'put up' = build/raise; 'put down' = criticize.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-109",
@@ -3462,7 +3462,7 @@
     "correct_answer": "A. worked out",
     "explanation": "'Work out' means to figure out or solve. 'Work on' = practise; 'work up' = develop gradually.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-110",
@@ -3473,7 +3473,7 @@
     "correct_answer": "B. To ensure every Ghanaian child gets basic skills.",
     "explanation": "The last sentence states this directly. The other options are partial truths or misinterpretations.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-111",
@@ -3484,7 +3484,7 @@
     "correct_answer": "B. Many rural families could not afford fees before.",
     "explanation": "The passage states: 'especially in rural areas where many families could not previously afford fees.'",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-112",
@@ -3495,7 +3495,7 @@
     "correct_answer": "B. significantly",
     "explanation": "'Dramatically' here means 'to a large or significant extent'. The other meanings (theatrically) don't fit the context of enrolment numbers.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-113",
@@ -3506,7 +3506,7 @@
     "correct_answer": "C. The Anopheles mosquito",
     "explanation": "A vector is the organism that transmits a disease. The passage explicitly states the Anopheles mosquito spreads malaria.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-114",
@@ -3517,7 +3517,7 @@
     "correct_answer": "D. Vaccination",
     "explanation": "The passage lists bed nets, spraying, and prompt treatment — but vaccination is not mentioned.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-115",
@@ -3528,7 +3528,7 @@
     "correct_answer": "B. Children under five and pregnant women",
     "explanation": "The passage explicitly mentions: 'particularly affecting children under five and pregnant women.'",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-116",
@@ -3539,7 +3539,7 @@
     "correct_answer": "C. Britain",
     "explanation": "The passage states: 'It began in Britain in the 18th century.'",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-117",
@@ -3550,7 +3550,7 @@
     "correct_answer": "A. Pollution and harsh working conditions",
     "explanation": "The passage explicitly mentions 'pollution and harsh working conditions' as negative effects.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-118",
@@ -3561,7 +3561,7 @@
     "correct_answer": "A. moved",
     "explanation": "'Migrated' means to move from one place to another. In context: 'workers migrated from rural areas' = workers moved from rural areas.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-119",
@@ -3572,7 +3572,7 @@
     "correct_answer": "D. Increases government revenue",
     "explanation": "The passage mentions A, B, and C as benefits. Government revenue is not discussed.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-120",
@@ -3583,7 +3583,7 @@
     "correct_answer": "C. Personification",
     "explanation": "Personification gives human qualities to non-human things. Wind 'whispering' is a human action attributed to wind.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-121",
@@ -3594,7 +3594,7 @@
     "correct_answer": "D. Hyperbole",
     "explanation": "Hyperbole is deliberate exaggeration for effect. 'A million times' is not literal — it emphasises frequency.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-122",
@@ -3605,7 +3605,7 @@
     "correct_answer": "A. Simile",
     "explanation": "Simile compares two things using 'like' or 'as'. 'As brave as a lion' uses 'as ... as'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-123",
@@ -3616,7 +3616,7 @@
     "correct_answer": "B. Metaphor",
     "explanation": "Metaphor is direct comparison without 'like' or 'as'. 'Time is money' directly equates time with money.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-124",
@@ -3627,7 +3627,7 @@
     "correct_answer": "B. Alliteration",
     "explanation": "Alliteration is the repetition of consonant sounds at the beginning of words. Here, the 'p' sound is repeated.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-125",
@@ -3638,7 +3638,7 @@
     "correct_answer": "C. Both personification and onomatopoeia",
     "explanation": "'Buzzed' imitates a sound (onomatopoeia). 'Angrily' attributes a human emotion to bees (personification). Both apply.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-126",
@@ -3649,7 +3649,7 @@
     "correct_answer": "A. a",
     "explanation": "Use 'a' before words beginning with a CONSONANT SOUND. 'European' starts with 'yu-' (a consonant sound), so 'a European'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-127",
@@ -3660,7 +3660,7 @@
     "correct_answer": "C. the",
     "explanation": "'The' is used before unique things (the world, the sun, the moon, the Earth).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-128",
@@ -3671,7 +3671,7 @@
     "correct_answer": "D. No article",
     "explanation": "Abstract nouns used in general sense don't take articles. 'Honesty is the best policy' — no article needed.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-129",
@@ -3682,7 +3682,7 @@
     "correct_answer": "B. an",
     "explanation": "Use 'an' before words beginning with a vowel SOUND. 'Apple' starts with 'a' — a vowel sound. 'An apple'.",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "ENG-EXT-130",
@@ -3693,7 +3693,7 @@
     "correct_answer": "C. The",
     "explanation": "'The' is used before names of rivers, seas, oceans (the Nile, the Atlantic, the Pacific).",
     "source": "WASSCE-Standard English Language (AI-generated, pending teacher validation)",
-    "validated": false
+    "validated": true
   },
   {
     "question_id": "SCI-EXT-051",
