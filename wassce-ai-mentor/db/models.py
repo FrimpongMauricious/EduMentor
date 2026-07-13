@@ -30,6 +30,7 @@ class Session(Base):
     current_subject: Mapped[str | None] = mapped_column(String(32), nullable=True)
     current_difficulty: Mapped[str] = mapped_column(String(16), nullable=False, default="easy")
     question_history: Mapped[str | None] = mapped_column(Text, nullable=True)
+    session_meta: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_expired: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     student: Mapped["Student"] = relationship("Student", back_populates="sessions")

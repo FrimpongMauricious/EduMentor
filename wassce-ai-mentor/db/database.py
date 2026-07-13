@@ -40,6 +40,21 @@ def get_db():
 
 
 def init_db():
-    """Create all tables if they do not exist."""
+    """Create all tables if they do not exist, then apply incremental migrations."""
     from db import models  # noqa: F401 — register models with Base
     Base.metadata.create_all(bind=engine)
+    _migrate_add_session_meta()
+
+
+def _migrate_add_session_meta() -> None:
+    """Add session_meta column to sessions table if missing (safe to call repeatedly)."""
+    from sqlalchemy import inspect, text
+    inspector = inspect(engine)
+    try:
+        columns = [col["name"] for col in inspector.get_columns("sessions")]
+    except Exception:
+        return  # Table doesn't exist yet — create_all() will handle it
+    if "session_meta" not in columns:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE sessions ADD COLUMN session_meta TEXT"))
+            conn.commit()

@@ -6,6 +6,13 @@ Implements FR-FSM-01 through FR-FSM-06.
 
 Each call to handle_message() takes a student's incoming text and current
 state from the database, returns the next state and the response text.
+
+Channel behaviour:
+  WhatsApp: full experience — subject → type selection (MCQ/Theory) → question
+  USSD:     constrained — subject → MCQ question immediately (no type prompt)
+
+USSD '99' pagination: long responses are broken into 150-char chunks delivered
+on demand via the '99' command (Feature 2).
 """
 import json
 import uuid
@@ -19,6 +26,7 @@ from db.models import Student, SessionRow, Interaction
 from fsm.states import FSMState, parse_subject
 from fsm.answer_evaluator import evaluate_answer
 from fsm import messages
+from fsm.ussd_pagination import paginate_ussd, get_next_ussd_chunk, has_pending_pagination
 from rag.grader import grade_answer
 from rag.retriever import get_by_id
 from adaptive.engine import pick_next_question, update_performance, identify_weakest_subject
@@ -166,6 +174,19 @@ def _session_stats(db: Session, session_id: str) -> tuple[int, int]:
     return attempted, correct
 
 
+# ─── SESSION META HELPERS (question_type + USSD pagination state) ─────────────
+
+def _get_meta(session: SessionRow) -> dict:
+    """Deserialise session_meta JSON into a mutable dict."""
+    return json.loads(session.session_meta or "{}")
+
+
+def _save_meta(db: Session, session: SessionRow, meta: dict) -> None:
+    """Persist the meta dict back to session_meta and commit."""
+    session.session_meta = json.dumps(meta) if meta else None
+    db.commit()
+
+
 # ─── QUESTION HELPERS ─────────────────────────────────────────────────────────
 
 def _store_question_in_session(session: SessionRow, question: dict) -> None:
@@ -185,34 +206,29 @@ def _get_current_question_meta(session: SessionRow) -> Optional[dict]:
     return get_by_id(history[-1])
 
 
-# ─── MAIN ENTRY POINT ────────────────────────────────────────────────────────
+# ─── INNER FSM STATE MACHINE ──────────────────────────────────────────────────
 
-def handle_message(
+def _handle_fsm(
     db: Session,
+    student: Student,
+    session: SessionRow,
+    meta: dict,
     student_id: str,
     channel: str,
-    incoming_text: str,
+    current_state: FSMState,
+    text: str,
+    text_upper: str,
 ) -> DialogueResult:
     """
-    Process one inbound student message through the FSM.
+    Core FSM state machine.  Called from handle_message() after USSD '99'
+    interception and pagination-state clearing have been handled.
 
-    Returns a DialogueResult containing the response text, new state,
-    and metadata for logging.
+    The `meta` dict is passed by reference; mutations here are visible
+    to handle_message() which persists them after applying USSD pagination.
     """
-    student = _get_or_create_student(db, student_id, channel)
-    session = _get_or_create_session(db, student_id)
-
-    current_state = FSMState(session.fsm_state)
-    text = (incoming_text or "").strip()
-    text_upper = text.upper()
-
-    logger.info(
-        f"FSM | student={student_id[:12]}... state={current_state.value} input={text!r}"
-    )
 
     # ─── GLOBAL COMMANDS (valid in any state) ─────────────────────────────
     if text_upper in {"STOP", "QUIT", "EXIT"}:
-        # Cancel any in-progress test before ending session
         active_test = get_active_test(db, student_id)
         if active_test is not None:
             db.delete(active_test)
@@ -313,13 +329,85 @@ def handle_message(
                 new_state=current_state,
             )
 
-        question = pick_next_question(db, session, requested_subject=subject_key)
+        if channel == "whatsapp":
+            # Feature 1: WhatsApp asks user to choose question type before fetching.
+            session.current_subject = subject_key  # Store for QUESTION_TYPE_SELECTION step
+            session.fsm_state = FSMState.QUESTION_TYPE_SELECTION.value
+            session.last_active_at = datetime.now(timezone.utc)
+            db.commit()
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=messages.subject_and_type_prompt(subject_key),
+                new_state=FSMState.QUESTION_TYPE_SELECTION,
+            )
+        else:
+            # USSD: always serve MCQs — skip type selection entirely.
+            meta["question_type"] = "mcq"
+            question = pick_next_question(db, session, requested_subject=subject_key, question_type="mcq")
+            if question is None:
+                _log_interaction(db, session, student_id, channel, current_state,
+                                 text, None, None, 0, 0.0)
+                return DialogueResult(
+                    response=messages.no_questions_of_type("mcq", "ussd"),
+                    new_state=FSMState.SUBJECT_SELECTION,
+                )
+
+            _store_question_in_session(session, question)
+            session.fsm_state = FSMState.QUESTION_DELIVERY.value
+            session.last_active_at = datetime.now(timezone.utc)
+            db.commit()
+
+            response = (
+                messages.subject_confirmed(subject_key)
+                + "\n\n"
+                + messages.question_delivery(question["question_text"])
+            )
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, question["question_id"], None, 0, question["similarity"])
+            return DialogueResult(
+                response=response,
+                new_state=FSMState.QUESTION_DELIVERY,
+                question_id=question["question_id"],
+                retrieval_score=question["similarity"],
+            )
+
+    if current_state == FSMState.QUESTION_TYPE_SELECTION:
+        # WhatsApp only: user picks 1 (MCQ) or 2 (Theory).
+        # USSD never reaches this state (auto-selects MCQ in SUBJECT_SELECTION).
+        if text == "1":
+            question_type = "mcq"
+        elif text == "2":
+            question_type = "open"
+        else:
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=messages.question_type_invalid(),
+                new_state=current_state,
+            )
+
+        meta["question_type"] = question_type
+        subject_key = session.current_subject
+
+        if not subject_key:
+            # Defensive: subject lost (e.g. corrupted session) — restart selection.
+            session.fsm_state = FSMState.SUBJECT_SELECTION.value
+            db.commit()
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=messages.subject_selection_prompt(),
+                new_state=FSMState.SUBJECT_SELECTION,
+            )
+
+        question = pick_next_question(db, session, requested_subject=subject_key, question_type=question_type)
         if question is None:
             _log_interaction(db, session, student_id, channel, current_state,
                              text, None, None, 0, 0.0)
             return DialogueResult(
-                response=messages.low_confidence_fallback(),
-                new_state=FSMState.SUBJECT_SELECTION,
+                response=messages.no_questions_of_type(question_type, "whatsapp"),
+                new_state=current_state,
             )
 
         _store_question_in_session(session, question)
@@ -327,15 +415,10 @@ def handle_message(
         session.last_active_at = datetime.now(timezone.utc)
         db.commit()
 
-        response = (
-            messages.subject_confirmed(subject_key)
-            + "\n\n"
-            + messages.question_delivery(question["question_text"])
-        )
         _log_interaction(db, session, student_id, channel, current_state,
                          text, question["question_id"], None, 0, question["similarity"])
         return DialogueResult(
-            response=response,
+            response=messages.question_delivery(question["question_text"]),
             new_state=FSMState.QUESTION_DELIVERY,
             question_id=question["question_id"],
             retrieval_score=question["similarity"],
@@ -435,7 +518,13 @@ def handle_message(
                     new_state=FSMState.SUBJECT_SELECTION,
                 )
 
-            question = pick_next_question(db, session, requested_subject=session.current_subject)
+            # Use stored question_type preference (MCQ/Theory) for next question.
+            question_type = meta.get("question_type")
+            question = pick_next_question(
+                db, session,
+                requested_subject=session.current_subject,
+                question_type=question_type,
+            )
             if question is None:
                 attempted, correct = _session_stats(db, session.session_id)
                 weakest = identify_weakest_subject(db, student_id) or session.current_subject
@@ -550,3 +639,76 @@ def handle_message(
         response=messages.fallback_unknown(),
         new_state=FSMState.GREETING,
     )
+
+
+# ─── MAIN ENTRY POINT ────────────────────────────────────────────────────────
+
+def handle_message(
+    db: Session,
+    student_id: str,
+    channel: str,
+    incoming_text: str,
+) -> DialogueResult:
+    """
+    Process one inbound student message through the FSM.
+
+    Wraps _handle_fsm() to implement USSD-specific concerns:
+      1. Intercept '99' to deliver the next pagination chunk.
+      2. Clear stale pagination state on navigation commands.
+      3. Apply paginate_ussd() to every USSD response before returning.
+
+    WhatsApp responses are never paginated (full text always delivered).
+
+    Returns a DialogueResult containing the response text, new state,
+    and metadata for logging.
+    """
+    student = _get_or_create_student(db, student_id, channel)
+    session = _get_or_create_session(db, student_id)
+
+    current_state = FSMState(session.fsm_state)
+    text = (incoming_text or "").strip()
+    text_upper = text.upper()
+
+    logger.info(
+        f"FSM | student={student_id[:12]}... state={current_state.value} "
+        f"channel={channel} input={text!r}"
+    )
+
+    # Load session metadata (question_type preference + USSD pagination state).
+    meta = _get_meta(session)
+
+    # ─── USSD '99' pagination interception ────────────────────────────────
+    # Handled BEFORE global commands: typing '99' delivers the next chunk
+    # and does nothing else.  Navigation commands always take priority when
+    # there is NO pending pagination.
+    if channel == "ussd" and text == "99" and has_pending_pagination(meta):
+        chunk = get_next_ussd_chunk(meta)
+        _save_meta(db, session, meta)
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, None, None, 0, 0.0)
+        return DialogueResult(response=chunk, new_state=current_state)
+
+    # ─── Clear USSD pagination on navigation commands ──────────────────────
+    # Commands always take priority over pending pagination.
+    if channel == "ussd" and text_upper in {
+        "STOP", "QUIT", "EXIT", "MENU", "SKIP", "NEXT", "STARTTEST", "CANCEL"
+    }:
+        meta.pop("ussd_full_text", None)
+        meta.pop("ussd_text_offset", None)
+
+    # ─── Core FSM processing ───────────────────────────────────────────────
+    result = _handle_fsm(
+        db, student, session, meta,
+        student_id, channel, current_state, text, text_upper,
+    )
+
+    # ─── Apply USSD pagination to every USSD response ─────────────────────
+    # paginate_ussd() is a no-op when the text is short enough.
+    if channel == "ussd":
+        result.response = paginate_ussd(result.response, meta)
+
+    # Persist meta for ALL channels so question_type preference (and USSD
+    # pagination state) survive across the multi-request conversation.
+    _save_meta(db, session, meta)
+
+    return result

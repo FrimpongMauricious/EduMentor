@@ -79,7 +79,8 @@ class TestFSMFlow:
     def test_valid_subject_selection_delivers_question(self, db):
         sid = _random_student_id()
         handle_message(db, sid, "whatsapp", "Hi")
-        result = handle_message(db, sid, "whatsapp", "1")  # Maths
+        handle_message(db, sid, "whatsapp", "1")   # Maths → QUESTION_TYPE_SELECTION
+        result = handle_message(db, sid, "whatsapp", "1")  # MCQs → QUESTION_DELIVERY
         assert result.new_state == FSMState.QUESTION_DELIVERY
         assert result.question_id is not None
         assert result.question_id.startswith("MATH-")
@@ -88,14 +89,16 @@ class TestFSMFlow:
     def test_subject_by_name(self, db):
         sid = _random_student_id()
         handle_message(db, sid, "whatsapp", "Hi")
-        result = handle_message(db, sid, "whatsapp", "science")
+        handle_message(db, sid, "whatsapp", "science")  # → QUESTION_TYPE_SELECTION
+        result = handle_message(db, sid, "whatsapp", "1")  # MCQs → QUESTION_DELIVERY
         assert result.new_state == FSMState.QUESTION_DELIVERY
         assert result.question_id.startswith("SCI-")
 
     def test_answer_evaluation_to_explanation(self, db):
         sid = _random_student_id()
         handle_message(db, sid, "whatsapp", "Hi")
-        handle_message(db, sid, "whatsapp", "1")  # get a maths question
+        handle_message(db, sid, "whatsapp", "1")  # Maths → QUESTION_TYPE_SELECTION
+        handle_message(db, sid, "whatsapp", "1")  # MCQs → QUESTION_DELIVERY
         result = handle_message(db, sid, "whatsapp", "some answer")
         assert result.new_state == FSMState.EXPLANATION
         assert result.evaluation_result in {"correct", "partial", "incorrect", "skip"}
@@ -104,7 +107,8 @@ class TestFSMFlow:
     def test_next_after_explanation_delivers_new_question(self, db):
         sid = _random_student_id()
         handle_message(db, sid, "whatsapp", "Hi")
-        handle_message(db, sid, "whatsapp", "1")
+        handle_message(db, sid, "whatsapp", "1")   # Maths → QUESTION_TYPE_SELECTION
+        handle_message(db, sid, "whatsapp", "1")   # MCQs → QUESTION_DELIVERY
         handle_message(db, sid, "whatsapp", "x = 5")  # answer → EXPLANATION
         result = handle_message(db, sid, "whatsapp", "NEXT")
         assert result.new_state == FSMState.QUESTION_DELIVERY
@@ -113,7 +117,8 @@ class TestFSMFlow:
     def test_skip_advances_to_explanation(self, db):
         sid = _random_student_id()
         handle_message(db, sid, "whatsapp", "Hi")
-        handle_message(db, sid, "whatsapp", "1")
+        handle_message(db, sid, "whatsapp", "1")   # Maths → QUESTION_TYPE_SELECTION
+        handle_message(db, sid, "whatsapp", "1")   # MCQs → QUESTION_DELIVERY
         result = handle_message(db, sid, "whatsapp", "SKIP")
         assert result.new_state == FSMState.EXPLANATION
         assert result.evaluation_result == "skip"
@@ -160,7 +165,8 @@ class TestFSMFlow:
         """FR-29: questions answered in this session should not repeat."""
         sid = _random_student_id()
         handle_message(db, sid, "whatsapp", "Hi")
-        handle_message(db, sid, "whatsapp", "1")  # Q1
+        handle_message(db, sid, "whatsapp", "1")   # Maths → QUESTION_TYPE_SELECTION
+        handle_message(db, sid, "whatsapp", "1")   # MCQs → QUESTION_DELIVERY (Q1)
 
         from db.models import SessionRow
         import json

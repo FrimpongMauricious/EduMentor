@@ -247,6 +247,7 @@ def pick_next_question(
     db: Session,
     session: SessionRow,
     requested_subject: Optional[str] = None,
+    question_type: Optional[str] = None,
 ) -> Optional[dict]:
     """
     Adaptive question selection.
@@ -286,6 +287,14 @@ def pick_next_question(
     if not candidates:
         logger.warning(f"No candidates for subject={target_subject}")
         return None
+
+    # Step 3b: filter by question type if requested (filter after retrieval, not inside retriever)
+    if question_type:
+        from rag.grader import detect_question_type
+        candidates = [c for c in candidates if detect_question_type(c["question_text"]) == question_type]
+        if not candidates:
+            logger.info(f"No {question_type} questions for subject={target_subject} difficulty={target_difficulty}")
+            return None
 
     # Step 4: build exclusion set (FR-29 + FR-30)
     correctly_answered = _get_correctly_answered_qids(db, session.session_id)

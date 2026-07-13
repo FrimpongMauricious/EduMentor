@@ -144,3 +144,31 @@ def test_already_complete() -> str:
 
 def test_cancelled() -> str:
     return "Test cancelled. Your progress was not saved.\nReply MENU to continue."
+
+
+# ─── QUESTION TYPE SELECTION (WhatsApp only) ──────────────────────────────────
+
+def subject_and_type_prompt(subject_key: str) -> str:
+    """Shown on WhatsApp after subject selection — asks user to pick MCQ or Theory."""
+    display = SUBJECT_DISPLAY_NAMES.get(subject_key, subject_key)
+    return (
+        f"Great! You picked {display}.\n\n"
+        "Choose question type:\n"
+        "1. Objectives (MCQs)\n"
+        "2. Theory\n\n"
+        "Type 1 or 2."
+    )
+
+
+def question_type_invalid() -> str:
+    return "Please type 1 for Objectives (MCQs) or 2 for Theory."
+
+
+def no_questions_of_type(question_type: str, channel: str) -> str:
+    label = "MCQ" if question_type == "mcq" else "theory"
+    if channel == "ussd":
+        return f"No {label} questions available.\nReply MENU for another subject."
+    return (
+        f"No {label} questions available for this subject. "
+        f"Try the other type or reply MENU to pick a different subject."
+    )
