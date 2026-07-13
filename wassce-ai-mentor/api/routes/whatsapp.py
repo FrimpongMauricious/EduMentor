@@ -7,6 +7,7 @@ Wired to the FSM dialogue manager.
 from fastapi import APIRouter, Request, Response, Depends
 from sqlalchemy.orm import Session as DBSession
 from db.database import get_db
+from db.models import Student
 from utils.logger import get_logger
 from utils.phone import normalise_phone, phone_to_student_id
 from utils.twilio_validator import validate_twilio_signature
@@ -31,6 +32,13 @@ async def whatsapp_webhook(request: Request, db: DBSession = Depends(get_db)):
     logger.info(f"WhatsApp inbound | student={student_id[:12]}... | body={body!r}")
 
     result = handle_message(db, student_id, "whatsapp", body)
+
+    # Store the Twilio-format phone number so the reminder system can reach this user.
+    # from_number is already in "whatsapp:+233..." format — exactly what Twilio needs for outbound.
+    student = db.get(Student, student_id)
+    if student and not student.phone_number:
+        student.phone_number = from_number
+        db.commit()
 
     reply = format_whatsapp_response(result.response)
     twiml = to_twiml(reply)

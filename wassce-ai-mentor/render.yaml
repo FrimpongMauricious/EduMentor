@@ -43,6 +43,8 @@ services:
         sync: false
       - key: DASHBOARD_PASSWORD
         sync: false
+      - key: CRON_SECRET
+        sync: false
 
   - type: web
     name: wassce-ai-mentor-dashboard

@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from db.database import init_db
 from api.routes import whatsapp, ussd, health
+from api.reminders import router as reminders_router
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -29,6 +30,7 @@ app = FastAPI(
 app.include_router(health.router)
 app.include_router(whatsapp.router)
 app.include_router(ussd.router)
+app.include_router(reminders_router)
 
 
 @app.get("/", tags=["root"])

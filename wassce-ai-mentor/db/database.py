@@ -44,6 +44,7 @@ def init_db():
     from db import models  # noqa: F401 — register models with Base
     Base.metadata.create_all(bind=engine)
     _migrate_add_session_meta()
+    _migrate_add_phone_number()
 
 
 def _migrate_add_session_meta() -> None:
@@ -58,3 +59,22 @@ def _migrate_add_session_meta() -> None:
         with engine.connect() as conn:
             conn.execute(text("ALTER TABLE sessions ADD COLUMN session_meta TEXT"))
             conn.commit()
+
+
+def _migrate_add_phone_number() -> None:
+    """Add phone_number column to students table if missing (safe to call repeatedly)."""
+    from sqlalchemy import inspect, text
+    inspector = inspect(engine)
+    try:
+        columns = [col["name"] for col in inspector.get_columns("students")]
+    except Exception:
+        return
+    if "phone_number" not in columns:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE students ADD COLUMN phone_number TEXT"))
+            conn.commit()
+
+
+def get_session():
+    """Context-manager-free session for non-request code (e.g. reminder cron)."""
+    return SessionLocal()

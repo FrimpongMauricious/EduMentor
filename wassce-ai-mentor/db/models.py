@@ -11,6 +11,7 @@ class Student(Base):
 
     student_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     channel: Mapped[str] = mapped_column(String(16), nullable=False)
+    phone_number: Mapped[str | None] = mapped_column(Text, nullable=True)
     registered_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     session_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
