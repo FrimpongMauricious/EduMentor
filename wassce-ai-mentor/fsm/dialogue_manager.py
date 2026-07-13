@@ -239,7 +239,7 @@ def _handle_fsm(
         _log_interaction(db, session, student_id, channel, current_state,
                          text, None, None, 0, 0.0)
         return DialogueResult(
-            response=messages.farewell(),
+            response=messages.farewell(channel),
             new_state=FSMState.GREETING,
             end_session=True,
         )
@@ -259,7 +259,7 @@ def _handle_fsm(
         _log_interaction(db, session, student_id, channel, current_state,
                          text, None, None, 0, 0.0)
         return DialogueResult(
-            response=messages.subject_selection_prompt(),
+            response=messages.subject_selection_prompt(channel),
             new_state=FSMState.SUBJECT_SELECTION,
         )
 
@@ -315,7 +315,7 @@ def _handle_fsm(
         _log_interaction(db, session, student_id, channel, current_state,
                          text, None, None, 0, 0.0)
         return DialogueResult(
-            response=messages.greeting(),
+            response=messages.greeting(channel),
             new_state=FSMState.SUBJECT_SELECTION,
         )
 
@@ -325,7 +325,7 @@ def _handle_fsm(
             _log_interaction(db, session, student_id, channel, current_state,
                              text, None, None, 0, 0.0)
             return DialogueResult(
-                response=messages.subject_invalid(),
+                response=messages.subject_invalid(channel),
                 new_state=current_state,
             )
 
@@ -359,9 +359,9 @@ def _handle_fsm(
             db.commit()
 
             response = (
-                messages.subject_confirmed(subject_key)
+                messages.subject_confirmed(subject_key, channel)
                 + "\n\n"
-                + messages.question_delivery(question["question_text"])
+                + messages.question_delivery(question["question_text"], channel)
             )
             _log_interaction(db, session, student_id, channel, current_state,
                              text, question["question_id"], None, 0, question["similarity"])
@@ -397,7 +397,7 @@ def _handle_fsm(
             _log_interaction(db, session, student_id, channel, current_state,
                              text, None, None, 0, 0.0)
             return DialogueResult(
-                response=messages.subject_selection_prompt(),
+                response=messages.subject_selection_prompt(channel),
                 new_state=FSMState.SUBJECT_SELECTION,
             )
 
@@ -418,7 +418,7 @@ def _handle_fsm(
         _log_interaction(db, session, student_id, channel, current_state,
                          text, question["question_id"], None, 0, question["similarity"])
         return DialogueResult(
-            response=messages.question_delivery(question["question_text"]),
+            response=messages.question_delivery(question["question_text"], channel),
             new_state=FSMState.QUESTION_DELIVERY,
             question_id=question["question_id"],
             retrieval_score=question["similarity"],
@@ -432,7 +432,7 @@ def _handle_fsm(
             _log_interaction(db, session, student_id, channel, current_state,
                              text, None, None, 0, 0.0)
             return DialogueResult(
-                response=messages.subject_selection_prompt(),
+                response=messages.subject_selection_prompt(channel),
                 new_state=FSMState.SUBJECT_SELECTION,
             )
 
@@ -441,10 +441,9 @@ def _handle_fsm(
 
         if text_upper == "SKIP":
             evaluation = "skip"
-            response = (
-                f"{messages.answer_skipped()}\n"
-                f"{messages.explanation_block(correct_ans, expl_text)}\n\n"
-                f"{messages.next_action_prompt()}"
+            response = messages.build_answer_response(
+                evaluation="skip", is_correct=False, score=0, feedback="",
+                correct_ans=correct_ans, expl_text=expl_text, channel=channel,
             )
         else:
             grade = grade_answer(
@@ -464,20 +463,10 @@ def _handle_fsm(
             else:
                 evaluation = "incorrect"
 
-            if is_correct and score == 100:
-                verdict = "Correct! Well done."
-            elif is_correct:
-                verdict = f"Good attempt! Score: {score}%\n{feedback}"
-            elif score > 0:
-                verdict = f"Not quite. Score: {score}%\n{feedback}"
-            else:
-                verdict = "Not quite. Here is the correct answer:"
-
-            response = (
-                f"{verdict}\n"
-                f"Answer: {correct_ans}\n"
-                f"Why: {expl_text}\n\n"
-                f"{messages.next_action_prompt()}"
+            response = messages.build_answer_response(
+                evaluation=evaluation, is_correct=is_correct, score=score,
+                feedback=feedback, correct_ans=correct_ans, expl_text=expl_text,
+                channel=channel,
             )
 
         # FR-26: update performance vector (skip counts as incorrect for tracking purposes)
@@ -514,7 +503,7 @@ def _handle_fsm(
                 _log_interaction(db, session, student_id, channel, current_state,
                                  text, None, None, 0, 0.0)
                 return DialogueResult(
-                    response=messages.subject_selection_prompt(),
+                    response=messages.subject_selection_prompt(channel),
                     new_state=FSMState.SUBJECT_SELECTION,
                 )
 
@@ -545,7 +534,7 @@ def _handle_fsm(
             _log_interaction(db, session, student_id, channel, current_state,
                              text, question["question_id"], None, 0, question["similarity"])
             return DialogueResult(
-                response=messages.question_delivery(question["question_text"]),
+                response=messages.question_delivery(question["question_text"], channel),
                 new_state=FSMState.QUESTION_DELIVERY,
                 question_id=question["question_id"],
                 retrieval_score=question["similarity"],
@@ -555,7 +544,7 @@ def _handle_fsm(
         _log_interaction(db, session, student_id, channel, current_state,
                          text, None, None, 0, 0.0)
         return DialogueResult(
-            response=messages.next_action_prompt(),
+            response=messages.next_action_prompt(channel),
             new_state=current_state,
         )
 
@@ -566,7 +555,7 @@ def _handle_fsm(
         _log_interaction(db, session, student_id, channel, current_state,
                          text, None, None, 0, 0.0)
         return DialogueResult(
-            response=messages.subject_selection_prompt(),
+            response=messages.subject_selection_prompt(channel),
             new_state=FSMState.SUBJECT_SELECTION,
         )
 
@@ -580,7 +569,7 @@ def _handle_fsm(
             _log_interaction(db, session, student_id, channel, current_state,
                              text, None, None, 0, 0.0)
             return DialogueResult(
-                response=messages.greeting(),
+                response=messages.greeting(channel),
                 new_state=FSMState.SUBJECT_SELECTION,
             )
 
@@ -688,8 +677,26 @@ def handle_message(
                          text, None, None, 0, 0.0)
         return DialogueResult(response=chunk, new_state=current_state)
 
+    # ─── USSD numeric shortcut translation (state-dependent) ──────────────
+    # On USSD, students type numbers instead of words for post-answer nav.
+    # Translation is strictly state-scoped to avoid ambiguity:
+    #   EXPLANATION:      1→NEXT, 2→MENU, 0→STOP
+    #   QUESTION_DELIVERY: 0→SKIP
+    # Other states (SUBJECT_SELECTION, etc.) keep their own numeric meaning.
+    if channel == "ussd":
+        if current_state == FSMState.EXPLANATION:
+            if text == "1":
+                text, text_upper = "NEXT", "NEXT"
+            elif text == "2":
+                text, text_upper = "MENU", "MENU"
+            elif text == "0":
+                text, text_upper = "STOP", "STOP"
+        elif current_state == FSMState.QUESTION_DELIVERY:
+            if text == "0":
+                text, text_upper = "SKIP", "SKIP"
+
     # ─── Clear USSD pagination on navigation commands ──────────────────────
-    # Commands always take priority over pending pagination.
+    # Runs after numeric translation so mapped commands also clear state.
     if channel == "ussd" and text_upper in {
         "STOP", "QUIT", "EXIT", "MENU", "SKIP", "NEXT", "STARTTEST", "CANCEL"
     }:

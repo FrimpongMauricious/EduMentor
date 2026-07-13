@@ -387,3 +387,178 @@ class TestUSSD99Integration:
         result = handle_message(db, sid, "whatsapp", "1")   # → MCQ
         # WhatsApp response should NOT contain the USSD pagination hint
         assert "99. More" not in result.response
+
+
+# ===========================================================================
+# FEATURE 3: Short USSD messages + numeric command mapping
+# ===========================================================================
+
+class TestUSSDShortMessages:
+    """Verify that static USSD messages fit within a single USSD screen."""
+
+    def test_ussd_greeting_under_160_chars(self):
+        from fsm.messages import greeting
+        msg = greeting(channel="ussd")
+        assert len(msg) <= 160, f"USSD greeting too long ({len(msg)} chars)"
+
+    def test_ussd_subject_prompt_under_160_chars(self):
+        from fsm.messages import subject_selection_prompt
+        msg = subject_selection_prompt(channel="ussd")
+        assert len(msg) <= 160
+
+    def test_ussd_subject_invalid_under_160_chars(self):
+        from fsm.messages import subject_invalid
+        msg = subject_invalid(channel="ussd")
+        assert len(msg) <= 160
+
+    def test_ussd_next_action_prompt_under_160_chars(self):
+        from fsm.messages import next_action_prompt
+        msg = next_action_prompt(channel="ussd")
+        assert len(msg) <= 160
+
+    def test_ussd_farewell_under_160_chars(self):
+        from fsm.messages import farewell
+        msg = farewell(channel="ussd")
+        assert len(msg) <= 160
+
+    def test_ussd_no_questions_under_160_chars(self):
+        from fsm.messages import no_questions_of_type
+        msg = no_questions_of_type("mcq", "ussd")
+        assert len(msg) <= 160
+
+    def test_whatsapp_greeting_unchanged(self):
+        from fsm.messages import greeting
+        msg = greeting(channel="whatsapp")
+        assert "Welcome to WASSCE AI Mentor!" in msg
+        assert "Core Mathematics" in msg
+
+    def test_whatsapp_subject_prompt_unchanged(self):
+        from fsm.messages import subject_selection_prompt
+        msg = subject_selection_prompt(channel="whatsapp")
+        assert "Core Mathematics" in msg
+        assert "English Language" in msg
+        assert "Integrated Science" in msg
+        assert "Social Studies" in msg
+
+    def test_whatsapp_farewell_unchanged(self):
+        from fsm.messages import farewell
+        msg = farewell(channel="whatsapp")
+        assert "Goodbye" in msg or "Good luck" in msg
+
+    def test_ussd_greeting_has_all_subjects(self):
+        from fsm.messages import greeting
+        msg = greeting(channel="ussd")
+        assert "1" in msg and "2" in msg and "3" in msg and "4" in msg
+        # All four subjects represented (abbreviated)
+        assert "Maths" in msg
+        assert "English" in msg
+        assert "Science" in msg
+        assert "Social" in msg
+
+    def test_ussd_correct_answer_format(self):
+        from fsm.messages import build_answer_response
+        msg = build_answer_response(
+            evaluation="correct", is_correct=True, score=100, feedback="",
+            correct_ans="B", expl_text="B is correct.", channel="ussd",
+        )
+        assert msg.startswith("Correct!")
+        assert "1.Next 2.Menu 0.Stop" in msg
+        assert len(msg) <= 160 + len("B is correct.")  # static parts < 160
+
+    def test_ussd_wrong_answer_format(self):
+        from fsm.messages import build_answer_response
+        msg = build_answer_response(
+            evaluation="incorrect", is_correct=False, score=0, feedback="",
+            correct_ans="C", expl_text="C is the right choice.", channel="ussd",
+        )
+        assert msg.startswith("Wrong.")
+        assert "1.Next 2.Menu 0.Stop" in msg
+
+    def test_ussd_skip_answer_format(self):
+        from fsm.messages import build_answer_response
+        msg = build_answer_response(
+            evaluation="skip", is_correct=False, score=0, feedback="",
+            correct_ans="A", expl_text="A because...", channel="ussd",
+        )
+        assert msg.startswith("Skipped.")
+        assert "1.Next 2.Menu 0.Stop" in msg
+
+    def test_whatsapp_correct_answer_unchanged(self):
+        from fsm.messages import build_answer_response
+        msg = build_answer_response(
+            evaluation="correct", is_correct=True, score=100, feedback="",
+            correct_ans="B", expl_text="B is correct.", channel="whatsapp",
+        )
+        assert "Correct! Well done." in msg
+        assert "Answer: B" in msg
+        assert "Why: B is correct." in msg
+        assert "NEXT" in msg
+
+    def test_whatsapp_wrong_answer_unchanged(self):
+        from fsm.messages import build_answer_response
+        msg = build_answer_response(
+            evaluation="incorrect", is_correct=False, score=0, feedback="",
+            correct_ans="C", expl_text="C is right.", channel="whatsapp",
+        )
+        assert "Not quite" in msg
+        assert "Answer: C" in msg
+        assert "NEXT" in msg
+
+
+class TestUSSDNumericCommands:
+    """USSD numeric shortcuts: 1→NEXT, 2→MENU, 0→STOP in EXPLANATION;
+    0→SKIP in QUESTION_DELIVERY."""
+
+    def _reach_explanation(self, db) -> str:
+        sid = _sid()
+        handle_message(db, sid, "ussd", "")    # GREETING → SUBJECT_SELECTION
+        handle_message(db, sid, "ussd", "1")   # pick Maths → QUESTION_DELIVERY
+        handle_message(db, sid, "ussd", "A")   # answer → EXPLANATION
+        return sid
+
+    def test_ussd_1_maps_to_next_in_explanation(self, db):
+        """Typing '1' on USSD in EXPLANATION state delivers the next question."""
+        sid = self._reach_explanation(db)
+        result = handle_message(db, sid, "ussd", "1")
+        assert result.new_state in {FSMState.QUESTION_DELIVERY, FSMState.SESSION_SUMMARY}
+
+    def test_ussd_2_maps_to_menu_in_explanation(self, db):
+        """Typing '2' on USSD in EXPLANATION state goes back to subject selection."""
+        sid = self._reach_explanation(db)
+        result = handle_message(db, sid, "ussd", "2")
+        assert result.new_state == FSMState.SUBJECT_SELECTION
+
+    def test_ussd_0_maps_to_stop_in_explanation(self, db):
+        """Typing '0' on USSD in EXPLANATION state ends the session."""
+        sid = self._reach_explanation(db)
+        result = handle_message(db, sid, "ussd", "0")
+        assert result.end_session is True
+
+    def test_ussd_0_maps_to_skip_in_question_delivery(self, db):
+        """Typing '0' on USSD in QUESTION_DELIVERY state skips the question."""
+        sid = _sid()
+        handle_message(db, sid, "ussd", "")
+        handle_message(db, sid, "ussd", "1")   # → QUESTION_DELIVERY
+        result = handle_message(db, sid, "ussd", "0")
+        assert result.new_state == FSMState.EXPLANATION
+        assert result.evaluation_result == "skip"
+
+    def test_whatsapp_1_not_mapped_in_explanation(self, db):
+        """On WhatsApp, '1' in EXPLANATION should NOT map to NEXT — it's an answer."""
+        sid = _sid()
+        handle_message(db, sid, "whatsapp", "Hi")
+        handle_message(db, sid, "whatsapp", "1")   # Maths → type prompt
+        handle_message(db, sid, "whatsapp", "1")   # MCQ → question
+        handle_message(db, sid, "whatsapp", "A")   # answer → EXPLANATION
+        result = handle_message(db, sid, "whatsapp", "1")
+        # '1' on WhatsApp in EXPLANATION should re-prompt (unrecognised), NOT advance
+        assert result.new_state == FSMState.EXPLANATION
+
+    def test_ussd_numeric_1_in_subject_selection_still_picks_maths(self, db):
+        """'1' in SUBJECT_SELECTION should still pick Maths, not be translated."""
+        sid = _sid()
+        handle_message(db, sid, "ussd", "")   # → SUBJECT_SELECTION
+        result = handle_message(db, sid, "ussd", "1")
+        assert result.new_state == FSMState.QUESTION_DELIVERY
+        assert result.question_id is not None
+        assert result.question_id.startswith("MATH-")
