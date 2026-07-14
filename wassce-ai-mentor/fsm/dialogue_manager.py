@@ -227,8 +227,11 @@ def _handle_fsm(
     to handle_message() which persists them after applying USSD pagination.
     """
 
-    # ─── GLOBAL COMMANDS (valid in any state) ─────────────────────────────
-    if text_upper in {"STOP", "QUIT", "EXIT"}:
+    # ─── GLOBAL COMMANDS (valid in any state except NAME_ENTRY) ──────────────
+    # During NAME_ENTRY every message is a name candidate — commands are suppressed.
+    _skip_globals = (current_state == FSMState.NAME_ENTRY)
+
+    if not _skip_globals and text_upper in {"STOP", "QUIT", "EXIT"}:
         active_test = get_active_test(db, student_id)
         if active_test is not None:
             db.delete(active_test)
@@ -244,7 +247,7 @@ def _handle_fsm(
             end_session=True,
         )
 
-    if text_upper == "HELP":
+    if not _skip_globals and text_upper == "HELP":
         _log_interaction(db, session, student_id, channel, current_state,
                          text, None, None, 0, 0.0)
         return DialogueResult(
@@ -252,7 +255,7 @@ def _handle_fsm(
             new_state=current_state,
         )
 
-    if text_upper == "MENU":
+    if not _skip_globals and text_upper == "MENU":
         session.fsm_state = FSMState.SUBJECT_SELECTION.value
         session.last_active_at = datetime.now(timezone.utc)
         db.commit()
@@ -263,7 +266,7 @@ def _handle_fsm(
             new_state=FSMState.SUBJECT_SELECTION,
         )
 
-    if text_upper == "SCORE":
+    if not _skip_globals and text_upper == "SCORE":
         attempted, correct = _session_stats(db, session.session_id)
         _log_interaction(db, session, student_id, channel, current_state,
                          text, None, None, 0, 0.0)
@@ -272,7 +275,7 @@ def _handle_fsm(
             new_state=current_state,
         )
 
-    if text_upper == "STARTTEST":
+    if not _skip_globals and text_upper == "STARTTEST":
         if has_completed_pretest(db, student_id) and has_completed_posttest(db, student_id):
             _log_interaction(db, session, student_id, channel, current_state,
                              text, None, None, 0, 0.0)
@@ -309,13 +312,56 @@ def _handle_fsm(
     # ─── STATE HANDLERS ───────────────────────────────────────────────────
 
     if current_state == FSMState.GREETING:
+        if student.name:
+            # Returning user — personalised welcome, straight to subject menu.
+            session.fsm_state = FSMState.SUBJECT_SELECTION.value
+            session.last_active_at = datetime.now(timezone.utc)
+            db.commit()
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=messages.welcome_back(student.name, channel),
+                new_state=FSMState.SUBJECT_SELECTION,
+            )
+        else:
+            # First-time user — ask for their name.
+            session.fsm_state = FSMState.NAME_ENTRY.value
+            session.last_active_at = datetime.now(timezone.utc)
+            db.commit()
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=messages.name_prompt(channel),
+                new_state=FSMState.NAME_ENTRY,
+            )
+
+    if current_state == FSMState.NAME_ENTRY:
+        _REJECTED_AS_NAME = {
+            "MENU", "STOP", "QUIT", "EXIT", "SKIP", "NEXT", "HELP",
+            "STARTTEST", "CANCEL", "HI", "HELLO",
+            "0", "1", "2", "3", "4", "99",
+        }
+        proposed = text.strip()
+        is_valid = (
+            2 <= len(proposed) <= 50
+            and any(c.isalpha() for c in proposed)
+            and proposed.upper() not in _REJECTED_AS_NAME
+        )
+        if not is_valid:
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=messages.name_invalid(channel),
+                new_state=current_state,
+            )
+        student.name = proposed.title()
         session.fsm_state = FSMState.SUBJECT_SELECTION.value
         session.last_active_at = datetime.now(timezone.utc)
         db.commit()
         _log_interaction(db, session, student_id, channel, current_state,
                          text, None, None, 0, 0.0)
         return DialogueResult(
-            response=messages.greeting(channel),
+            response=messages.name_accepted_with_menu(student.name, channel),
             new_state=FSMState.SUBJECT_SELECTION,
         )
 

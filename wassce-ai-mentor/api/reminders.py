@@ -42,13 +42,7 @@ REMINDER_MESSAGES = [
 
 
 def _get_all_whatsapp_users() -> list[str]:
-    """
-    Return all distinct WhatsApp phone numbers stored in the students table.
-
-    Phone numbers are in Twilio format ("whatsapp:+233XXXXXXXXX") and are stored
-    when a user first sends a message to the bot via the WhatsApp webhook.
-    Users who have never messaged will not have a phone_number on record.
-    """
+    """Return all distinct WhatsApp phone numbers (strings) for the status endpoint."""
     db = get_session()
     try:
         rows = (
@@ -65,6 +59,24 @@ def _get_all_whatsapp_users() -> list[str]:
         db.close()
 
 
+def _get_whatsapp_users_with_names() -> list[dict]:
+    """Return [{phone, name}] for all WhatsApp users with a stored phone number."""
+    db = get_session()
+    try:
+        rows = (
+            db.query(Student.phone_number, Student.name)
+            .filter(
+                Student.channel == "whatsapp",
+                Student.phone_number.isnot(None),
+            )
+            .group_by(Student.phone_number)
+            .all()
+        )
+        return [{"phone": row[0], "name": row[1]} for row in rows if row[0]]
+    finally:
+        db.close()
+
+
 @router.post("/cron/send-reminders")
 async def send_reminders(x_cron_secret: str = Header(None)):
     """
@@ -77,7 +89,7 @@ async def send_reminders(x_cron_secret: str = Header(None)):
     if x_cron_secret != CRON_SECRET:
         raise HTTPException(status_code=403, detail="Invalid cron secret")
 
-    users = _get_all_whatsapp_users()
+    users = _get_whatsapp_users_with_names()
 
     if not users:
         logger.info("Reminder batch: no WhatsApp users with stored phone numbers yet")
@@ -89,7 +101,7 @@ async def send_reminders(x_cron_secret: str = Header(None)):
             "total_users": 0,
         }
 
-    message = random.choice(REMINDER_MESSAGES)
+    base_message = random.choice(REMINDER_MESSAGES)
 
     try:
         client = Client(TWILIO_SID, TWILIO_TOKEN)
@@ -101,7 +113,10 @@ async def send_reminders(x_cron_secret: str = Header(None)):
     failed = 0
     errors = []
 
-    for user_number in users:
+    for user in users:
+        user_number = user["phone"]
+        name = user.get("name")
+        message = f"Hi {name}! {base_message}" if name else base_message
         try:
             client.messages.create(
                 body=message,
@@ -122,7 +137,7 @@ async def send_reminders(x_cron_secret: str = Header(None)):
     result = {
         "status": "ok",
         "timestamp": timestamp,
-        "message_used": message[:50] + "...",
+        "message_used": base_message[:50] + "...",
         "total_users": len(users),
         "sent": sent,
         "failed": failed,

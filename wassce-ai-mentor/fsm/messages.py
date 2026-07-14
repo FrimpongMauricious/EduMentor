@@ -220,6 +220,46 @@ def test_cancelled() -> str:
     return "Test cancelled. Your progress was not saved.\nReply MENU to continue."
 
 
+# ─── NAME CAPTURE (first contact only) ───────────────────────────────────────
+
+def name_prompt(channel: str = "whatsapp") -> str:
+    if channel == "ussd":
+        return "WASSCE AI Mentor\nEnter your name:"
+    return "Welcome to WASSCE AI Mentor! 📚\nWhat is your name?"
+
+
+def name_invalid(channel: str = "whatsapp") -> str:
+    if channel == "ussd":
+        return "Enter a valid name:"
+    return "Please enter a valid name (2–50 letters)."
+
+
+def name_accepted_with_menu(name: str, channel: str = "whatsapp") -> str:
+    if channel == "ussd":
+        return f"Hi {name}!\n1. Maths\n2. English\n3. Science\n4. Social Studies"
+    return (
+        f"Hi {name}! 👋\n"
+        "Pick a subject:\n"
+        "1. Core Mathematics\n"
+        "2. English Language\n"
+        "3. Integrated Science\n"
+        "4. Social Studies"
+    )
+
+
+def welcome_back(name: str, channel: str = "whatsapp") -> str:
+    if channel == "ussd":
+        return f"Hi {name}!\n1. Maths\n2. English\n3. Science\n4. Social Studies"
+    return (
+        f"Welcome back, {name}! 👋\n"
+        "Pick a subject:\n"
+        "1. Core Mathematics\n"
+        "2. English Language\n"
+        "3. Integrated Science\n"
+        "4. Social Studies"
+    )
+
+
 # ─── QUESTION TYPE SELECTION (WhatsApp only) ──────────────────────────────────
 
 def subject_and_type_prompt(subject_key: str) -> str:

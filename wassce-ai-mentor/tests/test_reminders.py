@@ -4,7 +4,7 @@ tests/test_reminders.py — Tests for the study reminder system.
 import pytest
 from unittest.mock import patch, MagicMock
 
-from api.reminders import REMINDER_MESSAGES, _get_all_whatsapp_users
+from api.reminders import REMINDER_MESSAGES, _get_all_whatsapp_users, _get_whatsapp_users_with_names
 
 
 # ─── Reminder message content ─────────────────────────────────────────────────
@@ -80,10 +80,9 @@ class TestReminderEndpoint:
     def test_correct_secret_with_no_twilio_creds_returns_500_or_ok(self, client):
         """
         With correct secret and no users, should return ok with 0 sent.
-        With users but broken Twilio creds, gracefully returns 500 from Twilio init.
-        We patch _get_all_whatsapp_users to return empty so it exits cleanly.
+        We patch _get_whatsapp_users_with_names to return empty so it exits cleanly.
         """
-        with patch("api.reminders._get_all_whatsapp_users", return_value=[]):
+        with patch("api.reminders._get_whatsapp_users_with_names", return_value=[]):
             response = client.post(
                 "/cron/send-reminders",
                 headers={"X-Cron-Secret": "wassce-reminder-secret-2025"},
@@ -96,11 +95,14 @@ class TestReminderEndpoint:
 
     def test_send_reminders_calls_twilio_per_user(self, client):
         """Verify Twilio client.messages.create is called for each user."""
-        fake_users = ["whatsapp:+233241000001", "whatsapp:+233241000002"]
+        fake_users = [
+            {"phone": "whatsapp:+233241000001", "name": "Kwame"},
+            {"phone": "whatsapp:+233241000002", "name": None},
+        ]
         mock_twilio_instance = MagicMock()
         mock_twilio_class = MagicMock(return_value=mock_twilio_instance)
 
-        with patch("api.reminders._get_all_whatsapp_users", return_value=fake_users), \
+        with patch("api.reminders._get_whatsapp_users_with_names", return_value=fake_users), \
              patch("api.reminders.Client", mock_twilio_class):
             response = client.post(
                 "/cron/send-reminders",
@@ -115,7 +117,10 @@ class TestReminderEndpoint:
 
     def test_twilio_failure_per_user_is_caught(self, client):
         """A Twilio error for one user must not stop the batch."""
-        fake_users = ["whatsapp:+233241000001", "whatsapp:+233241000002"]
+        fake_users = [
+            {"phone": "whatsapp:+233241000001", "name": "Ama"},
+            {"phone": "whatsapp:+233241000002", "name": "Kofi"},
+        ]
         mock_twilio_instance = MagicMock()
         mock_twilio_instance.messages.create.side_effect = [
             Exception("Twilio 63016: 24h window closed"),
@@ -123,7 +128,7 @@ class TestReminderEndpoint:
         ]
         mock_twilio_class = MagicMock(return_value=mock_twilio_instance)
 
-        with patch("api.reminders._get_all_whatsapp_users", return_value=fake_users), \
+        with patch("api.reminders._get_whatsapp_users_with_names", return_value=fake_users), \
              patch("api.reminders.Client", mock_twilio_class):
             response = client.post(
                 "/cron/send-reminders",
@@ -136,7 +141,7 @@ class TestReminderEndpoint:
         assert data["failed"] == 1
 
     def test_response_includes_timestamp(self, client):
-        with patch("api.reminders._get_all_whatsapp_users", return_value=[]):
+        with patch("api.reminders._get_whatsapp_users_with_names", return_value=[]):
             response = client.post(
                 "/cron/send-reminders",
                 headers={"X-Cron-Secret": "wassce-reminder-secret-2025"},

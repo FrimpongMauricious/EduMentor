@@ -45,6 +45,7 @@ def init_db():
     Base.metadata.create_all(bind=engine)
     _migrate_add_session_meta()
     _migrate_add_phone_number()
+    _migrate_add_student_name()
 
 
 def _migrate_add_session_meta() -> None:
@@ -72,6 +73,20 @@ def _migrate_add_phone_number() -> None:
     if "phone_number" not in columns:
         with engine.connect() as conn:
             conn.execute(text("ALTER TABLE students ADD COLUMN phone_number TEXT"))
+            conn.commit()
+
+
+def _migrate_add_student_name() -> None:
+    """Add name column to students table if missing (safe to call repeatedly)."""
+    from sqlalchemy import inspect, text
+    inspector = inspect(engine)
+    try:
+        columns = [col["name"] for col in inspector.get_columns("students")]
+    except Exception:
+        return
+    if "name" not in columns:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE students ADD COLUMN name TEXT"))
             conn.commit()
 
 

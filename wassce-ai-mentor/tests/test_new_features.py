@@ -40,6 +40,26 @@ def _sid() -> str:
     return uuid.uuid4().hex + uuid.uuid4().hex
 
 
+def _seed_name(db, sid: str, channel: str = "whatsapp", name: str = "Tester") -> None:
+    """Pre-create a student with a name so flow tests bypass the name-capture state."""
+    from db.models import Student
+    from datetime import datetime, timezone
+    existing = db.get(Student, sid)
+    if existing is None:
+        student = Student(
+            student_id=sid,
+            channel=channel,
+            name=name,
+            registered_at=datetime.now(timezone.utc),
+            last_seen_at=datetime.now(timezone.utc),
+        )
+        db.add(student)
+        db.commit()
+    else:
+        existing.name = name
+        db.commit()
+
+
 # ===========================================================================
 # FEATURE 1: MCQ vs Theory question type selection
 # ===========================================================================
@@ -109,6 +129,7 @@ class TestWhatsAppTypeSelectionFlow:
     def test_subject_selection_leads_to_type_prompt(self, db):
         """On WhatsApp, picking a subject should ask for MCQ or Theory."""
         sid = _sid()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         result = handle_message(db, sid, "whatsapp", "1")  # Maths
         assert result.new_state == FSMState.QUESTION_TYPE_SELECTION
@@ -118,6 +139,7 @@ class TestWhatsAppTypeSelectionFlow:
 
     def test_type_prompt_mentions_objectives_and_theory(self, db):
         sid = _sid()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         result = handle_message(db, sid, "whatsapp", "2")  # English
         assert "Objectives" in result.response or "MCQ" in result.response.upper()
@@ -127,6 +149,7 @@ class TestWhatsAppTypeSelectionFlow:
         """Selecting type '1' on WhatsApp must deliver an MCQ question."""
         from rag.retriever import get_by_id
         sid = _sid()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "1")  # Maths → type prompt
         result = handle_message(db, sid, "whatsapp", "1")  # MCQ
@@ -140,6 +163,7 @@ class TestWhatsAppTypeSelectionFlow:
         """Selecting type '2' on WhatsApp must deliver a theory question."""
         from rag.retriever import get_by_id
         sid = _sid()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "3")  # Science → type prompt
         result = handle_message(db, sid, "whatsapp", "2")  # Theory
@@ -152,6 +176,7 @@ class TestWhatsAppTypeSelectionFlow:
     def test_invalid_type_input_stays_in_type_selection(self, db):
         """Typing something other than 1 or 2 should re-prompt."""
         sid = _sid()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "1")  # Maths → type prompt
         result = handle_message(db, sid, "whatsapp", "banana")
@@ -161,6 +186,7 @@ class TestWhatsAppTypeSelectionFlow:
     def test_menu_from_type_selection_goes_to_subject_selection(self, db):
         """MENU is a global command and must work from QUESTION_TYPE_SELECTION."""
         sid = _sid()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "1")  # → QUESTION_TYPE_SELECTION
         result = handle_message(db, sid, "whatsapp", "MENU")
@@ -170,6 +196,7 @@ class TestWhatsAppTypeSelectionFlow:
         """After answering, NEXT must serve another MCQ if that was selected."""
         from rag.retriever import get_by_id
         sid = _sid()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "1")  # Maths → type prompt
         handle_message(db, sid, "whatsapp", "1")  # MCQ → question
@@ -185,6 +212,7 @@ class TestWhatsAppTypeSelectionFlow:
         """After answering, NEXT must serve another theory question if that was selected."""
         from rag.retriever import get_by_id
         sid = _sid()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "3")  # Science → type prompt
         handle_message(db, sid, "whatsapp", "2")  # Theory → question
@@ -205,6 +233,7 @@ class TestUSSDSkipsTypeSelection:
     def test_ussd_subject_selection_delivers_mcq_directly(self, db):
         """On USSD, subject selection must go straight to a question (no type prompt)."""
         sid = _sid()
+        _seed_name(db, sid, "ussd")
         handle_message(db, sid, "ussd", "")    # GREETING → SUBJECT_SELECTION
         result = handle_message(db, sid, "ussd", "1")   # Maths → MCQ immediately
         assert result.new_state == FSMState.QUESTION_DELIVERY
@@ -214,6 +243,7 @@ class TestUSSDSkipsTypeSelection:
         """Questions delivered over USSD must be MCQs."""
         from rag.retriever import get_by_id
         sid = _sid()
+        _seed_name(db, sid, "ussd")
         handle_message(db, sid, "ussd", "")
         result = handle_message(db, sid, "ussd", "1")
         assert result.new_state == FSMState.QUESTION_DELIVERY
@@ -226,6 +256,7 @@ class TestUSSDSkipsTypeSelection:
     def test_ussd_never_shows_type_prompt(self, db):
         """The QUESTION_TYPE_SELECTION state is never reached on USSD."""
         sid = _sid()
+        _seed_name(db, sid, "ussd")
         handle_message(db, sid, "ussd", "")
         result = handle_message(db, sid, "ussd", "1")
         assert result.new_state != FSMState.QUESTION_TYPE_SELECTION
@@ -326,6 +357,7 @@ class TestUSSD99Integration:
     def test_99_delivers_next_chunk(self, db):
         """Typing '99' after a paginated question returns the next chunk."""
         sid = _sid()
+        _seed_name(db, sid, "ussd")
         handle_message(db, sid, "ussd", "")    # → SUBJECT_SELECTION
         # Pick Maths; the response may be long enough to paginate.
         # We force the scenario by patching no assumption — just test the '99' path.
@@ -346,6 +378,7 @@ class TestUSSD99Integration:
     def test_menu_clears_pagination(self, db):
         """MENU during pagination must clear pagination state and go to SUBJECT_SELECTION."""
         sid = _sid()
+        _seed_name(db, sid, "ussd")
         handle_message(db, sid, "ussd", "")
         handle_message(db, sid, "ussd", "1")   # → QUESTION_DELIVERY
 
@@ -372,6 +405,7 @@ class TestUSSD99Integration:
     def test_ussd_response_length_within_limit(self, db):
         """Every USSD response (including first chunk) must be ≤178 chars (before CON prefix)."""
         sid = _sid()
+        _seed_name(db, sid, "ussd")
         handle_message(db, sid, "ussd", "")
         result = handle_message(db, sid, "ussd", "1")
         # 178 = 182 (USSD max) - 4 ("CON ")
@@ -382,6 +416,7 @@ class TestUSSD99Integration:
     def test_whatsapp_response_never_paginated(self, db):
         """WhatsApp responses must never be chunked — full text always delivered."""
         sid = _sid()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "1")   # → type selection
         result = handle_message(db, sid, "whatsapp", "1")   # → MCQ
@@ -511,6 +546,7 @@ class TestUSSDNumericCommands:
 
     def _reach_explanation(self, db) -> str:
         sid = _sid()
+        _seed_name(db, sid, "ussd")
         handle_message(db, sid, "ussd", "")    # GREETING → SUBJECT_SELECTION
         handle_message(db, sid, "ussd", "1")   # pick Maths → QUESTION_DELIVERY
         handle_message(db, sid, "ussd", "A")   # answer → EXPLANATION
@@ -537,6 +573,7 @@ class TestUSSDNumericCommands:
     def test_ussd_0_maps_to_skip_in_question_delivery(self, db):
         """Typing '0' on USSD in QUESTION_DELIVERY state skips the question."""
         sid = _sid()
+        _seed_name(db, sid, "ussd")
         handle_message(db, sid, "ussd", "")
         handle_message(db, sid, "ussd", "1")   # → QUESTION_DELIVERY
         result = handle_message(db, sid, "ussd", "0")
@@ -546,6 +583,7 @@ class TestUSSDNumericCommands:
     def test_whatsapp_1_not_mapped_in_explanation(self, db):
         """On WhatsApp, '1' in EXPLANATION should NOT map to NEXT — it's an answer."""
         sid = _sid()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "1")   # Maths → type prompt
         handle_message(db, sid, "whatsapp", "1")   # MCQ → question
@@ -557,6 +595,7 @@ class TestUSSDNumericCommands:
     def test_ussd_numeric_1_in_subject_selection_still_picks_maths(self, db):
         """'1' in SUBJECT_SELECTION should still pick Maths, not be translated."""
         sid = _sid()
+        _seed_name(db, sid, "ussd")
         handle_message(db, sid, "ussd", "")   # → SUBJECT_SELECTION
         result = handle_message(db, sid, "ussd", "1")
         assert result.new_state == FSMState.QUESTION_DELIVERY

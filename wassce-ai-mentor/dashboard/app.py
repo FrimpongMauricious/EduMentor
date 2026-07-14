@@ -32,6 +32,7 @@ from dashboard.queries import (
     weak_topics,
     prepost_results,
     student_list,
+    individual_student_performance,
     interaction_export,
     performance_export,
     test_attempts_export,
@@ -178,6 +179,23 @@ def _render_dashboard() -> None:
                     .rename(columns={"subject_display": "Subject", "accuracy_pct": "Accuracy (%)"}),
                 use_container_width=True,
             )
+
+        st.markdown("---")
+        st.subheader("Individual Student Performance")
+        try:
+            ind_df = individual_student_performance(engine)
+        except Exception as exc:
+            st.error(f"Could not load individual performance: {exc}")
+            ind_df = pd.DataFrame()
+
+        if ind_df.empty:
+            st.info("No individual performance data yet.")
+        else:
+            named = ind_df[ind_df["Student Name"] != "(unnamed)"]
+            unnamed_count = len(ind_df) - len(named)
+            if unnamed_count:
+                st.caption(f"{unnamed_count} student(s) without a registered name are shown as '(unnamed)'.")
+            st.dataframe(ind_df, use_container_width=True)
 
     # ── Tab 3: Channel Comparison ──────────────────────────────────────────────
     with tabs[2]:

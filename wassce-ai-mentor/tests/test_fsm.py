@@ -32,6 +32,26 @@ def _random_student_id() -> str:
     return uuid.uuid4().hex + uuid.uuid4().hex
 
 
+def _seed_name(db, sid: str, channel: str = "whatsapp", name: str = "Tester") -> None:
+    """Pre-create a student with a name so flow tests bypass the name-capture state."""
+    from db.models import Student
+    from datetime import datetime, timezone
+    existing = db.get(Student, sid)
+    if existing is None:
+        student = Student(
+            student_id=sid,
+            channel=channel,
+            name=name,
+            registered_at=datetime.now(timezone.utc),
+            last_seen_at=datetime.now(timezone.utc),
+        )
+        db.add(student)
+        db.commit()
+    else:
+        existing.name = name
+        db.commit()
+
+
 # ─── ANSWER EVALUATOR ───────────────────────────────────────────────────────
 class TestAnswerEvaluator:
     def test_exact_match_is_correct(self):
@@ -64,6 +84,7 @@ class TestAnswerEvaluator:
 class TestFSMFlow:
     def test_first_contact_returns_greeting(self, db):
         sid = _random_student_id()
+        _seed_name(db, sid)
         result = handle_message(db, sid, "whatsapp", "Hi")
         assert result.new_state == FSMState.SUBJECT_SELECTION
         assert "Welcome" in result.response
@@ -71,6 +92,7 @@ class TestFSMFlow:
 
     def test_invalid_subject_selection_stays(self, db):
         sid = _random_student_id()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         result = handle_message(db, sid, "whatsapp", "blahblah")
         assert result.new_state == FSMState.SUBJECT_SELECTION
@@ -78,6 +100,7 @@ class TestFSMFlow:
 
     def test_valid_subject_selection_delivers_question(self, db):
         sid = _random_student_id()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "1")   # Maths → QUESTION_TYPE_SELECTION
         result = handle_message(db, sid, "whatsapp", "1")  # MCQs → QUESTION_DELIVERY
@@ -88,6 +111,7 @@ class TestFSMFlow:
 
     def test_subject_by_name(self, db):
         sid = _random_student_id()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "science")  # → QUESTION_TYPE_SELECTION
         result = handle_message(db, sid, "whatsapp", "1")  # MCQs → QUESTION_DELIVERY
@@ -96,6 +120,7 @@ class TestFSMFlow:
 
     def test_answer_evaluation_to_explanation(self, db):
         sid = _random_student_id()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "1")  # Maths → QUESTION_TYPE_SELECTION
         handle_message(db, sid, "whatsapp", "1")  # MCQs → QUESTION_DELIVERY
@@ -106,6 +131,7 @@ class TestFSMFlow:
 
     def test_next_after_explanation_delivers_new_question(self, db):
         sid = _random_student_id()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "1")   # Maths → QUESTION_TYPE_SELECTION
         handle_message(db, sid, "whatsapp", "1")   # MCQs → QUESTION_DELIVERY
@@ -116,6 +142,7 @@ class TestFSMFlow:
 
     def test_skip_advances_to_explanation(self, db):
         sid = _random_student_id()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "1")   # Maths → QUESTION_TYPE_SELECTION
         handle_message(db, sid, "whatsapp", "1")   # MCQs → QUESTION_DELIVERY
@@ -125,13 +152,15 @@ class TestFSMFlow:
 
     def test_menu_from_any_state(self, db):
         sid = _random_student_id()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
-        handle_message(db, sid, "whatsapp", "1")  # in QUESTION_DELIVERY
+        handle_message(db, sid, "whatsapp", "1")  # in QUESTION_TYPE_SELECTION
         result = handle_message(db, sid, "whatsapp", "MENU")
         assert result.new_state == FSMState.SUBJECT_SELECTION
 
     def test_stop_ends_session(self, db):
         sid = _random_student_id()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "1")
         result = handle_message(db, sid, "whatsapp", "STOP")
@@ -140,6 +169,7 @@ class TestFSMFlow:
 
     def test_help_command(self, db):
         sid = _random_student_id()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         result = handle_message(db, sid, "whatsapp", "HELP")
         assert "NEXT" in result.response
@@ -164,6 +194,7 @@ class TestFSMFlow:
     def test_question_not_repeated_in_session(self, db):
         """FR-29: questions answered in this session should not repeat."""
         sid = _random_student_id()
+        _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
         handle_message(db, sid, "whatsapp", "1")   # Maths → QUESTION_TYPE_SELECTION
         handle_message(db, sid, "whatsapp", "1")   # MCQs → QUESTION_DELIVERY (Q1)

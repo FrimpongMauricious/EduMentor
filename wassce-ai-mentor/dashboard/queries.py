@@ -163,10 +163,34 @@ def prepost_results(engine) -> pd.DataFrame:
 
 def student_list(engine) -> pd.DataFrame:
     return _exec(engine, """
-        SELECT student_id, channel, registered_at, last_seen_at, session_count
+        SELECT student_id, name, channel, registered_at, last_seen_at, session_count
         FROM students
         ORDER BY registered_at DESC
     """)
+
+
+def individual_student_performance(engine) -> pd.DataFrame:
+    """
+    Per-student accuracy summary joined from performance_vectors.
+    Columns: Student Name, Channel, Questions Attempted, Accuracy (%), Last Active
+    """
+    df = _exec(engine, """
+        SELECT
+            COALESCE(s.name, '(unnamed)') AS "Student Name",
+            s.channel AS "Channel",
+            COALESCE(SUM(pv.attempts), 0) AS "Questions Attempted",
+            CASE
+                WHEN COALESCE(SUM(pv.attempts), 0) > 0
+                THEN ROUND(100.0 * COALESCE(SUM(pv.correct), 0) / SUM(pv.attempts), 1)
+                ELSE 0.0
+            END AS "Accuracy (%)",
+            s.last_seen_at AS "Last Active"
+        FROM students s
+        LEFT JOIN performance_vectors pv ON pv.student_id = s.student_id
+        GROUP BY s.student_id, s.name, s.channel, s.last_seen_at
+        ORDER BY s.last_seen_at DESC
+    """)
+    return df
 
 
 def interaction_export(engine) -> pd.DataFrame:
