@@ -265,6 +265,130 @@ class TestNameCapture:
 
 
 # ===========================================================================
+# BUG FIXES: NULL-NAME GUARD + GREETING RESET + SPACE-INSENSITIVE MCQ
+# ===========================================================================
+
+class TestBugFixes:
+    """Tests covering the three bug fixes."""
+
+    def test_existing_user_with_null_name_gets_prompted(self, db):
+        """Bug 1: pre-deployment users (name=NULL) must be prompted regardless of state."""
+        from db.models import Student
+        from datetime import datetime, timezone
+        sid = _sid()
+        # Simulate a user record created before the name feature was deployed
+        student = Student(
+            student_id=sid,
+            channel="whatsapp",
+            name=None,
+            registered_at=datetime.now(timezone.utc),
+            last_seen_at=datetime.now(timezone.utc),
+        )
+        db.add(student)
+        db.commit()
+
+        result = handle_message(db, sid, "whatsapp", "hi")
+        assert result.new_state == FSMState.NAME_ENTRY
+        assert "name" in result.response.lower()
+
+    def test_existing_user_null_name_gets_prompted_non_greeting(self, db):
+        """Bug 1: null-name users are redirected to NAME_ENTRY even on non-greeting msgs."""
+        from db.models import Student, SessionRow
+        from datetime import datetime, timezone
+        sid = _sid()
+        student = Student(
+            student_id=sid,
+            channel="whatsapp",
+            name=None,
+            registered_at=datetime.now(timezone.utc),
+            last_seen_at=datetime.now(timezone.utc),
+        )
+        db.add(student)
+        db.commit()
+
+        # Manually put session in SUBJECT_SELECTION (simulating stale pre-deployment state)
+        handle_message(db, sid, "whatsapp", "")  # creates session in NAME_ENTRY via null guard
+        session = db.query(SessionRow).filter(SessionRow.student_id == sid).first()
+        session.fsm_state = "SUBJECT_SELECTION"
+        db.commit()
+
+        # A non-greeting message should still trigger name prompt
+        result = handle_message(db, sid, "whatsapp", "Maths")
+        assert result.new_state == FSMState.NAME_ENTRY
+        assert "name" in result.response.lower()
+
+    def test_greeting_resets_state_from_explanation(self, db):
+        """Bug 2: sending 'hi' from EXPLANATION state resets to subject selection."""
+        sid = _sid()
+        _seed_name(db, sid, "whatsapp", "Kwame")
+        handle_message(db, sid, "whatsapp", "Hi")   # → SUBJECT_SELECTION
+        handle_message(db, sid, "whatsapp", "1")    # → QUESTION_TYPE_SELECTION
+        handle_message(db, sid, "whatsapp", "1")    # → QUESTION_DELIVERY
+        handle_message(db, sid, "whatsapp", "A")    # → EXPLANATION
+
+        result = handle_message(db, sid, "whatsapp", "hi")
+        assert result.new_state == FSMState.SUBJECT_SELECTION
+        assert "Kwame" in result.response
+
+    def test_greeting_resets_state_from_question_delivery(self, db):
+        """Bug 2: 'hello' mid-question returns to subject selection."""
+        sid = _sid()
+        _seed_name(db, sid, "whatsapp", "Ama")
+        handle_message(db, sid, "whatsapp", "Hi")
+        handle_message(db, sid, "whatsapp", "1")
+        handle_message(db, sid, "whatsapp", "1")    # → QUESTION_DELIVERY
+
+        result = handle_message(db, sid, "whatsapp", "hello")
+        assert result.new_state == FSMState.SUBJECT_SELECTION
+        assert "Ama" in result.response
+
+    def test_greeting_variants_all_reset(self, db):
+        """Bug 2: 'hey', 'start', 'begin', 'restart' all trigger the reset."""
+        for greeting in ("hey", "start", "begin", "restart"):
+            sid = _sid()
+            _seed_name(db, sid, "whatsapp", "Kofi")
+            # Get into QUESTION_DELIVERY
+            handle_message(db, sid, "whatsapp", "Hi")
+            handle_message(db, sid, "whatsapp", "1")
+            handle_message(db, sid, "whatsapp", "1")
+            result = handle_message(db, sid, "whatsapp", greeting)
+            assert result.new_state == FSMState.SUBJECT_SELECTION, (
+                f"Greeting '{greeting}' did not reset state"
+            )
+
+    def test_greeting_case_insensitive_reset(self, db):
+        """Bug 2: 'HI', 'Hello', 'HELLO' should all trigger the reset."""
+        for greeting in ("HI", "Hello", "HELLO", "Hey"):
+            sid = _sid()
+            _seed_name(db, sid, "whatsapp", "Abena")
+            handle_message(db, sid, "whatsapp", "Hi")
+            handle_message(db, sid, "whatsapp", "1")
+            handle_message(db, sid, "whatsapp", "1")   # QUESTION_DELIVERY
+            result = handle_message(db, sid, "whatsapp", greeting)
+            assert result.new_state == FSMState.SUBJECT_SELECTION
+
+    def test_700N_matches_700_N(self):
+        """MCQ space-insensitive: '700N' should match correct answer '700 N'."""
+        from rag.grader import grade_mcq
+        result = grade_mcq("700N", "C. 700 N")
+        assert result["is_correct"] is True
+        assert result["score"] == 100
+
+    def test_10kg_matches_10_kg(self):
+        """MCQ space-insensitive: '10kg' should match '10 kg'."""
+        from rag.grader import grade_mcq
+        result = grade_mcq("10kg", "B. 10 kg")
+        assert result["is_correct"] is True
+        assert result["score"] == 100
+
+    def test_space_insensitive_does_not_over_match(self):
+        """Space-insensitive matching must not create false positives."""
+        from rag.grader import grade_mcq
+        result = grade_mcq("700N", "C. 800 N")
+        assert result["is_correct"] is False
+
+
+# ===========================================================================
 # PERSONALISED REMINDERS
 # ===========================================================================
 

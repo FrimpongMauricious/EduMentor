@@ -58,21 +58,28 @@ def detect_question_type(question_text: str, explicit_type: Optional[str] = None
 # MCQ exact-match grading
 # ------------------------------------------------------------------
 def _normalise_mcq(s: str) -> str:
-    """Lowercase, strip, remove leading 'A.'/'A)' style prefixes."""
+    """Lowercase, strip, remove leading 'A.'/'A)' style prefixes, collapse whitespace."""
     s = (s or "").strip().lower()
     s = re.sub(r"^[a-d][\.\):]\s*", "", s)
-    return s.strip()
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
 
 
 def grade_mcq(student_answer: str, correct_answer: str) -> dict:
     """
     Returns {score: 100 or 0, is_correct: bool, feedback: str}
-    Accepts: "A", "A.", "A. Cattle", "Cattle", "cattle" all match.
+    Accepts: "A", "A.", "A. Cattle", "Cattle", "cattle", "700N" == "700 N" all match.
     """
     s = _normalise_mcq(student_answer)
     c = _normalise_mcq(correct_answer)
 
     if s == c:
+        return {"score": 100, "is_correct": True, "feedback": "Correct! Well done."}
+
+    # Space-insensitive comparison: "700N" matches "700 N", "10kg" matches "10 kg"
+    s_nospace = re.sub(r"\s", "", s)
+    c_nospace = re.sub(r"\s", "", c)
+    if s_nospace and s_nospace == c_nospace:
         return {"score": 100, "is_correct": True, "feedback": "Correct! Well done."}
 
     # Letter-only match (student typed "A", correct is "A. Cattle")

@@ -712,6 +712,56 @@ def handle_message(
     # Load session metadata (question_type preference + USSD pagination state).
     meta = _get_meta(session)
 
+    # ─── Greeting reset (Bug 2) + null-name guard (Bug 1) ─────────────────
+    # These run before ALL other processing.
+    #
+    # Bug 2: Any greeting word ("hi", "hello", etc.) resets the conversation
+    # to the start of the flow regardless of current state — so a user who
+    # rejoins after the Twilio sandbox "stop" disconnection gets a clean start.
+    #
+    # Bug 1: Users whose records were created before the name feature was
+    # deployed have name=NULL and should be sent to NAME_ENTRY no matter what
+    # state their session was in.
+    _GREETINGS = {"hi", "hello", "hey", "start", "begin", "restart"}
+
+    if text.lower() in _GREETINGS and current_state != FSMState.NAME_ENTRY:
+        meta.pop("ussd_full_text", None)
+        meta.pop("ussd_text_offset", None)
+        if student.name is None:
+            session.fsm_state = FSMState.NAME_ENTRY.value
+            session.last_active_at = datetime.now(timezone.utc)
+            db.commit()
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            response = messages.name_prompt(channel)
+            if channel == "ussd":
+                response = paginate_ussd(response, meta)
+            _save_meta(db, session, meta)
+            return DialogueResult(response=response, new_state=FSMState.NAME_ENTRY)
+        else:
+            session.fsm_state = FSMState.SUBJECT_SELECTION.value
+            session.last_active_at = datetime.now(timezone.utc)
+            db.commit()
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            response = messages.welcome_back(student.name, channel)
+            if channel == "ussd":
+                response = paginate_ussd(response, meta)
+            _save_meta(db, session, meta)
+            return DialogueResult(response=response, new_state=FSMState.SUBJECT_SELECTION)
+
+    if student.name is None and current_state != FSMState.NAME_ENTRY:
+        session.fsm_state = FSMState.NAME_ENTRY.value
+        session.last_active_at = datetime.now(timezone.utc)
+        db.commit()
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, None, None, 0, 0.0)
+        response = messages.name_prompt(channel)
+        if channel == "ussd":
+            response = paginate_ussd(response, meta)
+        _save_meta(db, session, meta)
+        return DialogueResult(response=response, new_state=FSMState.NAME_ENTRY)
+
     # ─── USSD '99' pagination interception ────────────────────────────────
     # Handled BEFORE global commands: typing '99' delivers the next chunk
     # and does nothing else.  Navigation commands always take priority when
