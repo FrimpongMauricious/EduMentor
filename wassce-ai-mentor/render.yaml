@@ -46,6 +46,31 @@ services:
       - key: CRON_SECRET
         sync: false
 
+  # React performance dashboard (Phase 1) — static site, separate service.
+  # Builds dashboard-react/ with Vite and serves the compiled dist/ folder.
+  # NOTE: the local YAML schema used by some editors does not recognise
+  # Render's static-site fields (runtime: static / staticPublishPath / routes)
+  # and may show lint errors here — that is a stale editor schema, not a
+  # Render error. If the Blueprint sync still rejects this block on your
+  # Render account, create the service manually instead: see the exact
+  # manual settings documented in dashboard-react/README.md.
+  - type: web
+    name: wassce-ai-mentor-react
+    runtime: static
+    region: frankfurt
+    branch: master
+    rootDir: dashboard-react
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://wassce-ai-mentor-api.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
   - type: web
     name: wassce-ai-mentor-dashboard
     runtime: python
