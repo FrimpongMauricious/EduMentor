@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
 
 from db.models import PerformanceVector, Interaction, SessionRow
-from rag.retriever import retrieve
+from rag.retriever import get_by_subject
 from config import get_settings
 from utils.logger import get_logger
 
@@ -260,7 +260,13 @@ def pick_next_question(
 
     Returns:
         A dict matching the retriever's output schema, or None if no
-        suitable question can be found.
+        question of the requested subject/type exists in the corpus at
+        all. If the student has exhausted every eligible question for
+        this subject+type in the current session, the pool resets and a
+        question is returned anyway, marked with `"pool_reset": True` so
+        the caller can inform the student (see FSM `no_questions_of_type`
+        vs. a "you've completed everything" notice — those are different
+        situations and must not be conflated).
     """
     student_id = session.student_id
 
@@ -278,17 +284,23 @@ def pick_next_question(
     # Step 2: target difficulty (FR-28)
     target_difficulty = compute_difficulty_for_subject(db, student_id, target_subject)
 
-    # Step 3: candidate pool via semantic search
-    candidates = retrieve(
-        query=f"{target_subject} {target_difficulty} practice question",
-        subject=target_subject,
-        top_k=20,
-    )
+    # Step 3: candidate pool — every corpus entry for the subject.
+    # Previously this used retrieve() (semantic top_k=20 search against a
+    # fixed, non-representative query string). That query was identical on
+    # every call for a given subject+difficulty, so Chroma always returned
+    # the same 20 nearest neighbours — permanently excluding every other
+    # entry from ever being selected (verified: 73 of 117 Maths entries,
+    # 62%, were structurally unreachable this way) and starving the
+    # exclusion logic below into a tiny pool that repeated quickly. Fetching
+    # the full subject pool by exact metadata match (no similarity ranking)
+    # fixes both: every entry is reachable, and there is enough headroom
+    # for FR-29/FR-30 exclusion to work as designed.
+    candidates = get_by_subject(target_subject)
     if not candidates:
         logger.warning(f"No candidates for subject={target_subject}")
         return None
 
-    # Step 3b: filter by question type if requested (filter after retrieval, not inside retriever)
+    # Step 3b: filter by question type if requested.
     if question_type:
         from rag.grader import detect_question_type
         candidates = [c for c in candidates if detect_question_type(c["question_text"]) == question_type]
@@ -319,22 +331,40 @@ def pick_next_question(
         # Last resort: ignore recently-delivered but still respect correct-answer exclusion
         pool = [c for c in candidates if c["question_id"] not in correctly_answered]
 
+    pool_reset = False
     if not pool:
-        logger.info(f"Corpus exhausted for student={student_id[:12]}... subject={target_subject}")
+        # Every eligible entry for this subject+type has been answered
+        # correctly in this session — there is nothing left to exclude.
+        # Reset rather than dead-ending: fall back to the full candidate
+        # set (still scoped to this subject+type) so the session continues.
+        logger.info(
+            f"Pool exhausted for student={student_id[:12]}... subject={target_subject} "
+            f"type={question_type} — resetting exclusion for this subject/type."
+        )
+        pool = candidates
+        pool_reset = True
+
+    if not pool:
+        # Unreachable in practice (candidates was already confirmed
+        # non-empty above), kept as a defensive guard against future changes.
         return None
 
-    # Step 6: weakest-topic preference (FR-27)
-    weakest_topic = identify_weakest_topic(db, student_id, target_subject)
-    if weakest_topic and random.random() < WEAK_AREA_WEIGHT:
-        topic_pool = [c for c in pool if c["topic"] == weakest_topic]
-        if topic_pool:
-            pool = topic_pool
+    # Step 6: weakest-topic preference (FR-27) — skip on a freshly-reset
+    # pool so the student sees a genuinely fresh spread, not just their
+    # weakest topic again immediately after "completing" the subject.
+    if not pool_reset:
+        weakest_topic = identify_weakest_topic(db, student_id, target_subject)
+        if weakest_topic and random.random() < WEAK_AREA_WEIGHT:
+            topic_pool = [c for c in pool if c["topic"] == weakest_topic]
+            if topic_pool:
+                pool = topic_pool
 
-    chosen = random.choice(pool)
+    chosen = dict(random.choice(pool))
+    chosen["pool_reset"] = pool_reset
     logger.info(
         f"Picked question | student={student_id[:12]}... "
         f"| subject={target_subject} difficulty={target_difficulty} "
-        f"topic={chosen['topic']} qid={chosen['question_id']}"
+        f"topic={chosen['topic']} qid={chosen['question_id']} pool_reset={pool_reset}"
     )
     return chosen
 

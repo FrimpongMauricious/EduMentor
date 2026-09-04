@@ -242,8 +242,12 @@ def _deliver_question_for_subject(
     session.last_active_at = datetime.now(timezone.utc)
     db.commit()
 
+    prefix = ""
+    if question.get("pool_reset"):
+        prefix = messages.pool_exhausted_notice(subject_key, question_type, channel)
     response = (
-        messages.subject_confirmed(subject_key, channel)
+        prefix
+        + messages.subject_confirmed(subject_key, channel)
         + "\n\n"
         + messages.question_delivery(question["question_text"], channel)
     )
@@ -507,10 +511,14 @@ def _handle_fsm(
         session.last_active_at = datetime.now(timezone.utc)
         db.commit()
 
+        prefix = ""
+        if question.get("pool_reset"):
+            prefix = messages.pool_exhausted_notice(subject_key, question_type, channel)
+
         _log_interaction(db, session, student_id, channel, current_state,
                          text, question["question_id"], None, 0, question["similarity"])
         return DialogueResult(
-            response=messages.question_delivery(question["question_text"], channel),
+            response=prefix + messages.question_delivery(question["question_text"], channel),
             new_state=FSMState.QUESTION_DELIVERY,
             question_id=question["question_id"],
             retrieval_score=question["similarity"],
@@ -623,10 +631,14 @@ def _handle_fsm(
             session.last_active_at = datetime.now(timezone.utc)
             db.commit()
 
+            prefix = ""
+            if question.get("pool_reset"):
+                prefix = messages.pool_exhausted_notice(session.current_subject, question_type, channel)
+
             _log_interaction(db, session, student_id, channel, current_state,
                              text, question["question_id"], None, 0, question["similarity"])
             return DialogueResult(
-                response=messages.question_delivery(question["question_text"], channel),
+                response=prefix + messages.question_delivery(question["question_text"], channel),
                 new_state=FSMState.QUESTION_DELIVERY,
                 question_id=question["question_id"],
                 retrieval_score=question["similarity"],

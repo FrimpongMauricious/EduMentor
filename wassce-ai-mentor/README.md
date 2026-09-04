@@ -17,7 +17,7 @@ A multi-channel RAG-based AI tutoring system for WASSCE candidates, accessible v
 ## Setup
 
 ```bash
-# 1. Clone the repository
+# 1. Clone the repository into your local working environment 
 git clone <repo-url>
 cd wassce-ai-mentor
 

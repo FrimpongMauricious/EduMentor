@@ -285,3 +285,13 @@ def no_questions_of_type(question_type: str, channel: str) -> str:
         f"No {label} questions available for this subject. "
         f"Try the other type or reply MENU to pick a different subject."
     )
+
+
+def pool_exhausted_notice(subject_key: str, question_type: str, channel: str) -> str:
+    """Shown when a student has correctly answered every eligible question
+    for a subject+type in this session, and the pool has just been reset."""
+    display = SUBJECT_DISPLAY_NAMES.get(subject_key, subject_key)
+    label = "MCQs" if question_type == "mcq" else "theory questions"
+    if channel == "ussd":
+        return f"Done all {display} {label}! Starting over."
+    return f"You've completed all available {display} {label} for now — starting over.\n\n"

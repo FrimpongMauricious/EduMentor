@@ -3,6 +3,7 @@ tests/test_adaptive.py — Adaptive engine unit tests.
 
 Run via: pytest tests/test_adaptive.py -v
 """
+# for adaptive egrading based on anwer 
 import pytest
 import uuid
 import json
@@ -181,12 +182,22 @@ class TestPickNextQuestion:
             if q is not None:
                 assert q["question_id"] != "MATH-001"
 
-    def test_returns_none_when_corpus_exhausted(self, db):
+    def test_pool_resets_when_subject_exhausted(self, db):
+        """
+        Once every eligible entry for a subject+type has been answered
+        correctly in this session, pick_next_question must reset the
+        exclusion and keep going (marked via pool_reset=True) rather than
+        dead-ending with None — the corpus is finite, so a real student
+        can genuinely exhaust it, and the session must not stall.
+        """
         sid = _make_student(db)
         s = _make_session(db, sid)
-        # Fetch the actual candidate pool the engine uses, then mark all as answered
-        from rag.retriever import retrieve
-        candidates = retrieve("maths easy practice question", subject="maths", top_k=20)
+        # Fetch the ACTUAL full candidate pool the engine now uses
+        # (get_by_subject — the whole subject, not a semantic top-k slice),
+        # and mark every single entry as answered correctly.
+        from rag.retriever import get_by_subject
+        candidates = get_by_subject("maths")
+        assert len(candidates) > 20, "sanity check: pool must be larger than the old top_k=20 slice"
         for c in candidates:
             db.add(Interaction(
                 interaction_id=str(uuid.uuid4()),
@@ -201,6 +212,17 @@ class TestPickNextQuestion:
         db.commit()
 
         q = pick_next_question(db, s, requested_subject="maths")
+        assert q is not None, "must reset and return a question, not dead-end"
+        assert q["pool_reset"] is True
+        assert q["subject"] == "maths"
+
+    def test_returns_none_only_when_type_does_not_exist_in_corpus(self, db):
+        """English has zero theory questions at all — that's a genuine
+        'this type doesn't exist' case and must still return None (distinct
+        from session-exhaustion, which resets instead)."""
+        sid = _make_student(db)
+        s = _make_session(db, sid)
+        q = pick_next_question(db, s, requested_subject="english", question_type="open")
         assert q is None
 
 

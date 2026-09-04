@@ -11,6 +11,8 @@ dashboard/app.py — Teacher analytics dashboard (Step 6).
 
 Run with:  streamlit run dashboard/app.py
 """
+
+ # student dashboard for teachers to see the performance of students and the weak topics and also the pre and post test results
 import os
 
 import pandas as pd

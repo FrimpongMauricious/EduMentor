@@ -33,7 +33,7 @@
 
 - **Hosting:** Render free tier, Frankfurt region (eu-central-1)
 - **Keep-alive:** cron-job.org pings `/health` every 10 minutes to prevent Render free-tier idle spin-down
-- **Test status:** 96/96 automated tests passing
+- **Test status:** 96/96 automated tests passing( passed all test cases)
 
 ## Known Limitations (Sandbox Mode)
 
