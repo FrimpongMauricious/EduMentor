@@ -5,7 +5,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from db.database import Base
 
-
+#creating the student class
 class Student(Base):
     __tablename__ = "students"
 

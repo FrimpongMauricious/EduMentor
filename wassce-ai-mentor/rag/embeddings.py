@@ -14,7 +14,7 @@ from openai import OpenAI
 from utils.logger import get_logger
 
 load_dotenv()
-
+#log data 
 logger = get_logger(__name__)
 
 _client = None

@@ -24,7 +24,7 @@ def greeting(channel: str = "whatsapp") -> str:
         "4. Social Studies"
     )
 
-
+#creating the subject selection prompt 
 def subject_selection_prompt(channel: str = "whatsapp") -> str:
     if channel == "ussd":
         return "Pick subject:\n1. Maths\n2. English\n3. Science\n4. Social Studies"

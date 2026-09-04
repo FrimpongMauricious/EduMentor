@@ -75,7 +75,7 @@ def _migrate_add_phone_number() -> None:
             conn.execute(text("ALTER TABLE students ADD COLUMN phone_number TEXT"))
             conn.commit()
 
-
+#migrating
 def _migrate_add_student_name() -> None:
     """Add name column to students table if missing (safe to call repeatedly)."""
     from sqlalchemy import inspect, text
