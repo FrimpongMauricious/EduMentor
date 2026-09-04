@@ -17,6 +17,9 @@ export default function Landing() {
           <button className="btn btn--primary" onClick={() => navigate("/student")}>
             I am a Student
           </button>
+          <button className="btn btn--secondary" onClick={() => navigate("/guardian")}>
+            I am a Guardian
+          </button>
           <button className="btn btn--secondary" onClick={() => navigate("/teacher")}>
             I am a Teacher
           </button>
