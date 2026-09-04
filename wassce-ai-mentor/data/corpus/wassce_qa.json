@@ -1,10 +1,11 @@
+
 [
   {
     "question_id": "MATH-W2025-001",
     "subject": "maths",
     "topic": "simple_interest",
     "difficulty": "hard",
-    "question_text": "Mr. Gyan bought a car for $16,800.00 and later sold it at 85% of the original cost. He spent $3,930.75 from the money he received and invested the remaining at 18% per annum simple interest. How much interest did he earn in 9 years?\nA. $67,657.00\nB. $32,018.32\nC. $16,765.79\nD. $20,848.19",
+    "question_text": "Mr. Gyan bought a car that costs $16,800.00 and later sold it at 85% of the original cost. He spent $3,930.75 from the money he received and invested the remaining at 18% per annum simple interest. How much interest did he earn in 9 years?\nA. $67,657.00\nB. $32,018.32\nC. $16,765.79\nD. $20,848.19",
     "correct_answer": "C. $16,765.79",
     "explanation": "Selling price = 0.85 × $16,800 = $14,280. Amount invested = $14,280 − $3,930.75 = $10,349.25. Simple interest = (P × R × T)/100 = (10,349.25 × 18 × 9)/100 = $16,765.79.",
     "source": "WASSCE 2025 Core Mathematics Paper 1",
