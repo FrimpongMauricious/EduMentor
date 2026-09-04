@@ -57,7 +57,6 @@ services:
   - type: web
     name: wassce-ai-mentor-react
     runtime: static
-    region: frankfurt
     branch: master
     rootDir: dashboard-react
     buildCommand: npm install && npm run build
