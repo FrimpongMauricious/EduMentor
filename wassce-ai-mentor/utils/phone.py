@@ -40,6 +40,27 @@ def normalise_phone(raw_phone: str) -> str:
     return "+" + phone
 
 
+def is_valid_phone(raw: str) -> bool:
+    """
+    Return True only if raw, once normalised, looks like a real E.164
+    phone number: '+' followed by 7-15 digits and nothing else.
+
+    Twilio's WhatsApp "From" field is normally trustworthy, but can
+    occasionally deliver a non-numeric identifier instead of a real
+    number (e.g. 'whatsapp:GH.2142378006405521', seen in production —
+    a WhatsApp/Twilio-side substitution tied to linked-device or
+    business-account setups on the sender's end). This rejects those
+    and any other garbage before it gets persisted.
+    """
+    if not raw:
+        return False
+    try:
+        e164 = normalise_phone(raw)
+    except ValueError:
+        return False
+    return bool(re.fullmatch(r"\+\d{7,15}", e164))
+
+
 def hash_phone(e164_phone: str) -> str:
     """Return SHA-256 hex digest of the E.164 phone number."""
     return hashlib.sha256(e164_phone.encode("utf-8")).hexdigest()

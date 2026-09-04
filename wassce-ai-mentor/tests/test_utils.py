@@ -2,7 +2,7 @@
 tests/test_utils.py — Unit tests for utility modules.
 """
 import pytest
-from utils.phone import normalise_phone, hash_phone, phone_to_student_id
+from utils.phone import normalise_phone, hash_phone, phone_to_student_id, is_valid_phone
 from utils.response_formatter import format_whatsapp_response, format_ussd_response, to_twiml
 
 
@@ -44,6 +44,25 @@ class TestPhoneHashing:
         a = phone_to_student_id("0241234567")
         b = phone_to_student_id("+233241234567")
         assert a == b
+
+
+class TestPhoneValidation:
+    def test_valid_ghana_number(self):
+        assert is_valid_phone("whatsapp:+233531850867") is True
+
+    def test_valid_local_format(self):
+        assert is_valid_phone("0531850867") is True
+
+    def test_rejects_twilio_non_numeric_identifier(self):
+        # Actual bad value observed in production Twilio webhook logs —
+        # a linked-device/business-account identifier, not a phone number.
+        assert is_valid_phone("whatsapp:GH.2142378006405521") is False
+
+    def test_rejects_empty_string(self):
+        assert is_valid_phone("") is False
+
+    def test_rejects_none(self):
+        assert is_valid_phone(None) is False
 
 
 class TestResponseFormatter:

@@ -180,7 +180,7 @@ class TestPhoneNumberStorage:
         """After a WhatsApp interaction, the student record must have phone_number set."""
         from fsm.dialogue_manager import handle_message
         from db.models import Student
-        from utils.phone import phone_to_student_id
+        from utils.phone import phone_to_student_id, is_valid_phone
 
         raw_number = "whatsapp:+233241234567"
         student_id = phone_to_student_id(raw_number)
@@ -188,12 +188,33 @@ class TestPhoneNumberStorage:
         # Simulate handle_message (creates Student record)
         handle_message(db, student_id, "whatsapp", "Hi")
 
-        # Simulate what the webhook does: store phone_number if not set
+        # Simulate what the webhook does: store phone_number only if valid
         student = db.get(Student, student_id)
         assert student is not None
-        if not student.phone_number:
+        if not student.phone_number and is_valid_phone(raw_number):
             student.phone_number = raw_number
             db.commit()
 
         student = db.get(Student, student_id)
         assert student.phone_number == raw_number
+
+    def test_invalid_from_value_not_stored(self, db):
+        """A non-numeric Twilio 'From' identifier must never be persisted as phone_number."""
+        from fsm.dialogue_manager import handle_message
+        from db.models import Student
+        from utils.phone import phone_to_student_id, is_valid_phone
+
+        raw_number = "whatsapp:GH.2142378006405521"  # observed in production logs
+        student_id = phone_to_student_id(raw_number)
+
+        handle_message(db, student_id, "whatsapp", "Hi")
+
+        # Simulate what the webhook does: store phone_number only if valid
+        student = db.get(Student, student_id)
+        assert student is not None
+        if not student.phone_number and is_valid_phone(raw_number):
+            student.phone_number = raw_number
+            db.commit()
+
+        student = db.get(Student, student_id)
+        assert student.phone_number is None

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session as DBSession
 from db.database import get_db
 from db.models import Student
 from utils.logger import get_logger
-from utils.phone import normalise_phone, phone_to_student_id
+from utils.phone import normalise_phone, phone_to_student_id, is_valid_phone
 from utils.twilio_validator import validate_twilio_signature
 from utils.response_formatter import format_whatsapp_response, to_twiml
 from fsm.dialogue_manager import handle_message
@@ -35,10 +35,19 @@ async def whatsapp_webhook(request: Request, db: DBSession = Depends(get_db)):
 
     # Store the Twilio-format phone number so the reminder system can reach this user.
     # from_number is already in "whatsapp:+233..." format — exactly what Twilio needs for outbound.
+    # Twilio can occasionally send a non-numeric identifier here instead of a real
+    # number (linked-device/business-account quirk on the sender's end) — validate
+    # before persisting so a bad value can't silently break phone-based lookup later.
     student = db.get(Student, student_id)
     if student and not student.phone_number:
-        student.phone_number = from_number
-        db.commit()
+        if is_valid_phone(from_number):
+            student.phone_number = from_number
+            db.commit()
+        else:
+            logger.warning(
+                f"Skipped storing phone_number for student {student_id[:12]}...: "
+                f"Twilio 'From' value failed phone validation (non-standard identifier, not logged)."
+            )
 
     reply = format_whatsapp_response(result.response)
     twiml = to_twiml(reply)
