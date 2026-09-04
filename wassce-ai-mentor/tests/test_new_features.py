@@ -131,7 +131,9 @@ class TestWhatsAppTypeSelectionFlow:
         sid = _sid()
         _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
-        result = handle_message(db, sid, "whatsapp", "1")  # Maths
+        # Science, not Maths — Maths theory is temporarily disabled (see
+        # rag.grader.DISABLED_THEORY_SUBJECTS).
+        result = handle_message(db, sid, "whatsapp", "3")  # Science
         assert result.new_state == FSMState.QUESTION_TYPE_SELECTION
         assert "1" in result.response  # option 1 present
         assert "2" in result.response  # option 2 present
@@ -152,7 +154,7 @@ class TestWhatsAppTypeSelectionFlow:
         sid = _sid()
         _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
-        handle_message(db, sid, "whatsapp", "1")  # Maths → type prompt
+        handle_message(db, sid, "whatsapp", "3")  # Science → type prompt
         result = handle_message(db, sid, "whatsapp", "1")  # MCQ
         assert result.new_state == FSMState.QUESTION_DELIVERY
         assert result.question_id is not None
@@ -179,7 +181,7 @@ class TestWhatsAppTypeSelectionFlow:
         sid = _sid()
         _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
-        handle_message(db, sid, "whatsapp", "1")  # Maths → type prompt
+        handle_message(db, sid, "whatsapp", "3")  # Science → type prompt
         result = handle_message(db, sid, "whatsapp", "banana")
         assert result.new_state == FSMState.QUESTION_TYPE_SELECTION
         assert "1" in result.response and "2" in result.response
@@ -189,7 +191,7 @@ class TestWhatsAppTypeSelectionFlow:
         sid = _sid()
         _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
-        handle_message(db, sid, "whatsapp", "1")  # → QUESTION_TYPE_SELECTION
+        handle_message(db, sid, "whatsapp", "3")  # Science → QUESTION_TYPE_SELECTION
         result = handle_message(db, sid, "whatsapp", "MENU")
         assert result.new_state == FSMState.SUBJECT_SELECTION
 
@@ -274,15 +276,15 @@ class TestTypePromptSkippedForSingleTypeSubjects:
     def test_available_question_types_reflects_corpus(self):
         from rag.grader import available_question_types
         assert available_question_types("english") == {"mcq"}
-        assert "mcq" in available_question_types("maths")
-        assert "open" in available_question_types("maths")
+        assert "mcq" in available_question_types("science")
+        assert "open" in available_question_types("science")
 
     def test_subject_with_both_types_still_shows_prompt(self, db):
-        """Maths has both MCQ and theory — prompt must still appear."""
+        """Science has both MCQ and theory — prompt must still appear."""
         sid = _sid()
         _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
-        result = handle_message(db, sid, "whatsapp", "1")  # Maths
+        result = handle_message(db, sid, "whatsapp", "3")  # Science
         assert result.new_state == FSMState.QUESTION_TYPE_SELECTION
         assert result.question_id is None
 
@@ -328,6 +330,91 @@ class TestTypePromptSkippedForSingleTypeSubjects:
         question = get_by_id(result.question_id)
         assert question is not None
         assert detect_question_type(question["question_text"]) == "open"
+
+
+class TestMathsTheoryTemporarilyDisabled:
+    """
+    Feature 1c: Maths theory questions are temporarily disabled at the
+    serving layer (rag.grader.DISABLED_THEORY_SUBJECTS) pending a content
+    audit, even though 17 theory entries genuinely exist in the corpus.
+    Science and Social Studies must be completely unaffected.
+    """
+
+    def test_maths_available_types_is_mcq_only_despite_corpus_data(self):
+        from rag.grader import available_question_types, DISABLED_THEORY_SUBJECTS
+        assert "maths" in DISABLED_THEORY_SUBJECTS
+        assert available_question_types("maths") == {"mcq"}
+
+    def test_maths_theory_entries_still_exist_in_corpus(self):
+        """The override must not delete or mutate the underlying data."""
+        from rag.retriever import get_by_subject
+        entries = get_by_subject("maths")
+        theory = [e for e in entries if detect_question_type(e["question_text"]) == "open"]
+        assert len(theory) == 17
+
+    def test_maths_skips_prompt_on_whatsapp(self, db):
+        from rag.retriever import get_by_id
+        sid = _sid()
+        _seed_name(db, sid)
+        handle_message(db, sid, "whatsapp", "Hi")
+        result = handle_message(db, sid, "whatsapp", "1")  # Maths
+        assert result.new_state == FSMState.QUESTION_DELIVERY
+        assert result.question_id is not None
+        question = get_by_id(result.question_id)
+        assert question is not None
+        assert detect_question_type(question["question_text"]) == "mcq"
+
+    def test_maths_skips_prompt_on_ussd(self, db):
+        sid = _sid()
+        _seed_name(db, sid, "ussd")
+        handle_message(db, sid, "ussd", "")
+        result = handle_message(db, sid, "ussd", "1")  # Maths
+        assert result.new_state == FSMState.QUESTION_DELIVERY
+        assert result.question_id is not None
+
+    def test_science_unaffected_prompt_and_both_types_still_work(self, db):
+        from rag.retriever import get_by_id
+        sid = _sid()
+        _seed_name(db, sid)
+        handle_message(db, sid, "whatsapp", "Hi")
+        result = handle_message(db, sid, "whatsapp", "3")  # Science
+        assert result.new_state == FSMState.QUESTION_TYPE_SELECTION
+
+        mcq_result = handle_message(db, sid, "whatsapp", "1")
+        assert mcq_result.new_state == FSMState.QUESTION_DELIVERY
+        mcq_q = get_by_id(mcq_result.question_id)
+        assert detect_question_type(mcq_q["question_text"]) == "mcq"
+
+        sid2 = _sid()
+        _seed_name(db, sid2)
+        handle_message(db, sid2, "whatsapp", "Hi")
+        handle_message(db, sid2, "whatsapp", "3")  # Science
+        theory_result = handle_message(db, sid2, "whatsapp", "2")
+        assert theory_result.new_state == FSMState.QUESTION_DELIVERY
+        theory_q = get_by_id(theory_result.question_id)
+        assert detect_question_type(theory_q["question_text"]) == "open"
+
+    def test_social_studies_unaffected_prompt_and_both_types_still_work(self, db):
+        from rag.retriever import get_by_id
+        sid = _sid()
+        _seed_name(db, sid)
+        handle_message(db, sid, "whatsapp", "Hi")
+        result = handle_message(db, sid, "whatsapp", "4")  # Social Studies
+        assert result.new_state == FSMState.QUESTION_TYPE_SELECTION
+
+        mcq_result = handle_message(db, sid, "whatsapp", "1")
+        assert mcq_result.new_state == FSMState.QUESTION_DELIVERY
+        mcq_q = get_by_id(mcq_result.question_id)
+        assert detect_question_type(mcq_q["question_text"]) == "mcq"
+
+        sid2 = _sid()
+        _seed_name(db, sid2)
+        handle_message(db, sid2, "whatsapp", "Hi")
+        handle_message(db, sid2, "whatsapp", "4")  # Social Studies
+        theory_result = handle_message(db, sid2, "whatsapp", "2")
+        assert theory_result.new_state == FSMState.QUESTION_DELIVERY
+        theory_q = get_by_id(theory_result.question_id)
+        assert detect_question_type(theory_q["question_text"]) == "open"
 
 
 # ===========================================================================

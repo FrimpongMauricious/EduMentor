@@ -102,11 +102,14 @@ class TestFSMFlow:
         sid = _random_student_id()
         _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
-        handle_message(db, sid, "whatsapp", "1")   # Maths → QUESTION_TYPE_SELECTION
+        # Science (not Maths — Maths theory is temporarily disabled, see
+        # rag.grader.DISABLED_THEORY_SUBJECTS, so it no longer reaches
+        # QUESTION_TYPE_SELECTION) has both MCQ and theory questions.
+        handle_message(db, sid, "whatsapp", "3")   # Science → QUESTION_TYPE_SELECTION
         result = handle_message(db, sid, "whatsapp", "1")  # MCQs → QUESTION_DELIVERY
         assert result.new_state == FSMState.QUESTION_DELIVERY
         assert result.question_id is not None
-        assert result.question_id.startswith("MATH-")
+        assert result.question_id.startswith("SCI-")
         assert "Question" in result.response
 
     def test_subject_by_name(self, db):
@@ -122,7 +125,7 @@ class TestFSMFlow:
         sid = _random_student_id()
         _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
-        handle_message(db, sid, "whatsapp", "1")  # Maths → QUESTION_TYPE_SELECTION
+        handle_message(db, sid, "whatsapp", "3")  # Science → QUESTION_TYPE_SELECTION
         handle_message(db, sid, "whatsapp", "1")  # MCQs → QUESTION_DELIVERY
         result = handle_message(db, sid, "whatsapp", "some answer")
         assert result.new_state == FSMState.EXPLANATION
@@ -144,7 +147,7 @@ class TestFSMFlow:
         sid = _random_student_id()
         _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
-        handle_message(db, sid, "whatsapp", "1")   # Maths → QUESTION_TYPE_SELECTION
+        handle_message(db, sid, "whatsapp", "3")   # Science → QUESTION_TYPE_SELECTION
         handle_message(db, sid, "whatsapp", "1")   # MCQs → QUESTION_DELIVERY
         result = handle_message(db, sid, "whatsapp", "SKIP")
         assert result.new_state == FSMState.EXPLANATION

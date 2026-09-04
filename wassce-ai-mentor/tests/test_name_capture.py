@@ -256,7 +256,10 @@ class TestNameCapture:
         assert result2.new_state == FSMState.SUBJECT_SELECTION
         assert "Kwame Asante" in result2.response
 
-        result3 = handle_message(db, sid, "whatsapp", "1")  # Maths → type prompt
+        # Science, not Maths — Maths theory is temporarily disabled (see
+        # rag.grader.DISABLED_THEORY_SUBJECTS) so it now skips straight to
+        # a question instead of reaching QUESTION_TYPE_SELECTION.
+        result3 = handle_message(db, sid, "whatsapp", "3")  # Science → type prompt
         assert result3.new_state == FSMState.QUESTION_TYPE_SELECTION
 
         result4 = handle_message(db, sid, "whatsapp", "1")  # MCQ → question

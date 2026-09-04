@@ -41,6 +41,16 @@ def _get_client() -> OpenAI:
 # ------------------------------------------------------------------
 _MCQ_PATTERN = re.compile(r"\n\s*[A-D]\.\s", re.MULTILINE)
 
+# TEMPORARY: Maths theory questions disabled pending content audit
+# (self-contradictory worked solutions found in the Maths theory corpus
+# entries — flagged ahead of a live pitch, 2026-09-04).
+# This does NOT delete or mutate the underlying corpus/DB data — it only
+# hides "open" (theory) questions from available_question_types() below,
+# so Mathematics is served as MCQ-only until the content is reviewed and
+# corrected. Remove "maths" from this set (or delete the set + its check
+# in available_question_types()) once the Maths theory entries are fixed.
+DISABLED_THEORY_SUBJECTS = {"maths"}
+
 
 def detect_question_type(question_text: str, explicit_type: Optional[str] = None) -> str:
     """
@@ -65,7 +75,10 @@ def available_question_types(subject: str) -> frozenset[str]:
     """
     from rag.retriever import get_by_subject
     entries = get_by_subject(subject)
-    return frozenset(detect_question_type(e["question_text"]) for e in entries)
+    types = frozenset(detect_question_type(e["question_text"]) for e in entries)
+    if subject in DISABLED_THEORY_SUBJECTS:
+        types = types - {"open"}
+    return types
 
 
 # ------------------------------------------------------------------
