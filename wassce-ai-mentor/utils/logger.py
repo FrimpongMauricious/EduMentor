@@ -3,7 +3,7 @@ utils/logger.py — Centralised structured logger for the application.
 """
 import logging
 import sys
-
+# log acitivited for easy debugging and monitoring of the application
 
 def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
