@@ -12,6 +12,7 @@ should get full credit.
 import json
 import re
 import os
+from functools import lru_cache
 from typing import Optional
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -52,6 +53,19 @@ def detect_question_type(question_text: str, explicit_type: Optional[str] = None
     if _MCQ_PATTERN.search(question_text or ""):
         return "mcq"
     return "open"
+
+
+@lru_cache(maxsize=None)
+def available_question_types(subject: str) -> frozenset[str]:
+    """
+    Which question types ("mcq", "open") actually exist in the corpus for a
+    subject. Drives whether the WhatsApp Objectives-vs-Theory prompt is shown:
+    subjects with only one type in the corpus skip the prompt entirely.
+    Cached per subject since the corpus is static for the life of the process.
+    """
+    from rag.retriever import get_by_subject
+    entries = get_by_subject(subject)
+    return frozenset(detect_question_type(e["question_text"]) for e in entries)
 
 
 # ------------------------------------------------------------------

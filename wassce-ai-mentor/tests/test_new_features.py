@@ -141,7 +141,8 @@ class TestWhatsAppTypeSelectionFlow:
         sid = _sid()
         _seed_name(db, sid)
         handle_message(db, sid, "whatsapp", "Hi")
-        result = handle_message(db, sid, "whatsapp", "2")  # English
+        result = handle_message(db, sid, "whatsapp", "3")  # Science — has both MCQ and theory
+        assert result.new_state == FSMState.QUESTION_TYPE_SELECTION
         assert "Objectives" in result.response or "MCQ" in result.response.upper()
         assert "Theory" in result.response
 
@@ -260,6 +261,73 @@ class TestUSSDSkipsTypeSelection:
         handle_message(db, sid, "ussd", "")
         result = handle_message(db, sid, "ussd", "1")
         assert result.new_state != FSMState.QUESTION_TYPE_SELECTION
+
+
+class TestTypePromptSkippedForSingleTypeSubjects:
+    """
+    Feature 1b: the Objectives-vs-Theory prompt is driven by the ACTUAL
+    corpus, not a hardcoded subject list. English currently has zero theory
+    questions (verified via rag.grader.available_question_types), so it must
+    skip the prompt entirely on WhatsApp and go straight to an MCQ.
+    """
+
+    def test_available_question_types_reflects_corpus(self):
+        from rag.grader import available_question_types
+        assert available_question_types("english") == {"mcq"}
+        assert "mcq" in available_question_types("maths")
+        assert "open" in available_question_types("maths")
+
+    def test_subject_with_both_types_still_shows_prompt(self, db):
+        """Maths has both MCQ and theory — prompt must still appear."""
+        sid = _sid()
+        _seed_name(db, sid)
+        handle_message(db, sid, "whatsapp", "Hi")
+        result = handle_message(db, sid, "whatsapp", "1")  # Maths
+        assert result.new_state == FSMState.QUESTION_TYPE_SELECTION
+        assert result.question_id is None
+
+    def test_mcq_only_subject_skips_prompt_on_whatsapp(self, db):
+        """English has no theory questions — WhatsApp must skip straight to an MCQ."""
+        from rag.retriever import get_by_id
+        sid = _sid()
+        _seed_name(db, sid)
+        handle_message(db, sid, "whatsapp", "Hi")
+        result = handle_message(db, sid, "whatsapp", "2")  # English
+        assert result.new_state == FSMState.QUESTION_DELIVERY
+        assert result.question_id is not None
+        question = get_by_id(result.question_id)
+        assert question is not None
+        assert detect_question_type(question["question_text"]) == "mcq"
+
+    def test_mcq_only_subject_skips_prompt_on_ussd(self, db):
+        """USSD already never shows the prompt — confirm it still works for an MCQ-only subject."""
+        sid = _sid()
+        _seed_name(db, sid, "ussd")
+        handle_message(db, sid, "ussd", "")
+        result = handle_message(db, sid, "ussd", "2")  # English
+        assert result.new_state == FSMState.QUESTION_DELIVERY
+        assert result.question_id is not None
+
+    def test_theory_only_subject_would_skip_and_serve_theory(self, db, monkeypatch):
+        """
+        No subject is theory-only in the current corpus, but the branch must
+        still be correct: simulate one by forcing available types to {"open"}
+        and confirm the prompt is skipped and a theory question is served.
+        """
+        import fsm.dialogue_manager as dm
+        from rag.retriever import get_by_id
+
+        monkeypatch.setattr(dm, "available_question_types", lambda subject: frozenset({"open"}))
+
+        sid = _sid()
+        _seed_name(db, sid)
+        handle_message(db, sid, "whatsapp", "Hi")
+        result = handle_message(db, sid, "whatsapp", "3")  # Science
+        assert result.new_state == FSMState.QUESTION_DELIVERY
+        assert result.question_id is not None
+        question = get_by_id(result.question_id)
+        assert question is not None
+        assert detect_question_type(question["question_text"]) == "open"
 
 
 # ===========================================================================

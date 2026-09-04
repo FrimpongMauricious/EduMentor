@@ -8,8 +8,11 @@ Each call to handle_message() takes a student's incoming text and current
 state from the database, returns the next state and the response text.
 
 Channel behaviour:
-  WhatsApp: full experience — subject → type selection (MCQ/Theory) → question
-  USSD:     constrained — subject → MCQ question immediately (no type prompt)
+  WhatsApp: subject → type selection (MCQ/Theory) → question, but only when
+            the subject actually has both types in the corpus; subjects with
+            just one type skip straight to a question of that type.
+  USSD:     constrained — subject → question immediately (no type prompt),
+            preferring MCQ when available for that subject.
 
 USSD '99' pagination: long responses are broken into 150-char chunks delivered
 on demand via the '99' command (Feature 2).
@@ -27,7 +30,7 @@ from fsm.states import FSMState, parse_subject
 from fsm.answer_evaluator import evaluate_answer
 from fsm import messages
 from fsm.ussd_pagination import paginate_ussd, get_next_ussd_chunk, has_pending_pagination
-from rag.grader import grade_answer
+from rag.grader import grade_answer, available_question_types
 from rag.retriever import get_by_id
 from adaptive.engine import pick_next_question, update_performance, identify_weakest_subject
 from test_module.engine import (
@@ -206,6 +209,54 @@ def _get_current_question_meta(session: SessionRow) -> Optional[dict]:
     return get_by_id(history[-1])
 
 
+def _deliver_question_for_subject(
+    db: Session,
+    session: SessionRow,
+    meta: dict,
+    student_id: str,
+    channel: str,
+    current_state: FSMState,
+    text: str,
+    subject_key: str,
+    question_type: str,
+) -> "DialogueResult":
+    """
+    Fetch and deliver the next question for a subject/type directly — used
+    both by USSD (which never shows a type prompt) and by WhatsApp when the
+    subject only has one question type in the corpus (so there is nothing to
+    prompt for). Combines the "subject confirmed" and "question delivered"
+    messages into a single reply, same as the historical USSD flow.
+    """
+    meta["question_type"] = question_type
+    question = pick_next_question(db, session, requested_subject=subject_key, question_type=question_type)
+    if question is None:
+        _log_interaction(db, session, student_id, channel, current_state,
+                         text, None, None, 0, 0.0)
+        return DialogueResult(
+            response=messages.no_questions_of_type(question_type, channel),
+            new_state=FSMState.SUBJECT_SELECTION,
+        )
+
+    _store_question_in_session(session, question)
+    session.fsm_state = FSMState.QUESTION_DELIVERY.value
+    session.last_active_at = datetime.now(timezone.utc)
+    db.commit()
+
+    response = (
+        messages.subject_confirmed(subject_key, channel)
+        + "\n\n"
+        + messages.question_delivery(question["question_text"], channel)
+    )
+    _log_interaction(db, session, student_id, channel, current_state,
+                     text, question["question_id"], None, 0, question["similarity"])
+    return DialogueResult(
+        response=response,
+        new_state=FSMState.QUESTION_DELIVERY,
+        question_id=question["question_id"],
+        retrieval_score=question["similarity"],
+    )
+
+
 # ─── INNER FSM STATE MACHINE ──────────────────────────────────────────────────
 
 def _handle_fsm(
@@ -375,7 +426,13 @@ def _handle_fsm(
                 new_state=current_state,
             )
 
-        if channel == "whatsapp":
+        # Which question types actually exist for this subject in the corpus.
+        # Drives whether the type-selection prompt is shown at all — a
+        # subject with only MCQs (or, in principle, only theory) has nothing
+        # to choose between, so we skip straight to a question of that type.
+        types_available = available_question_types(subject_key)
+
+        if channel == "whatsapp" and len(types_available) > 1:
             # Feature 1: WhatsApp asks user to choose question type before fetching.
             session.current_subject = subject_key  # Store for QUESTION_TYPE_SELECTION step
             session.fsm_state = FSMState.QUESTION_TYPE_SELECTION.value
@@ -387,40 +444,29 @@ def _handle_fsm(
                 response=messages.subject_and_type_prompt(subject_key),
                 new_state=FSMState.QUESTION_TYPE_SELECTION,
             )
-        else:
-            # USSD: always serve MCQs — skip type selection entirely.
-            meta["question_type"] = "mcq"
-            question = pick_next_question(db, session, requested_subject=subject_key, question_type="mcq")
-            if question is None:
-                _log_interaction(db, session, student_id, channel, current_state,
-                                 text, None, None, 0, 0.0)
-                return DialogueResult(
-                    response=messages.no_questions_of_type("mcq", "ussd"),
-                    new_state=FSMState.SUBJECT_SELECTION,
-                )
-
-            _store_question_in_session(session, question)
-            session.fsm_state = FSMState.QUESTION_DELIVERY.value
-            session.last_active_at = datetime.now(timezone.utc)
-            db.commit()
-
-            response = (
-                messages.subject_confirmed(subject_key, channel)
-                + "\n\n"
-                + messages.question_delivery(question["question_text"], channel)
+        elif channel == "whatsapp":
+            # Only one question type exists for this subject — skip the prompt
+            # and serve that type directly, exactly as if the student had
+            # already chosen it.
+            only_type = next(iter(types_available), "mcq")
+            return _deliver_question_for_subject(
+                db, session, meta, student_id, channel, current_state, text,
+                subject_key, only_type,
             )
-            _log_interaction(db, session, student_id, channel, current_state,
-                             text, question["question_id"], None, 0, question["similarity"])
-            return DialogueResult(
-                response=response,
-                new_state=FSMState.QUESTION_DELIVERY,
-                question_id=question["question_id"],
-                retrieval_score=question["similarity"],
+        else:
+            # USSD: never shows a type prompt. Prefer MCQ (short-answer,
+            # fits the constrained USSD screen) when available; otherwise
+            # fall back to whatever type the subject actually has.
+            only_type = "mcq" if "mcq" in types_available else next(iter(types_available), "mcq")
+            return _deliver_question_for_subject(
+                db, session, meta, student_id, channel, current_state, text,
+                subject_key, only_type,
             )
 
     if current_state == FSMState.QUESTION_TYPE_SELECTION:
-        # WhatsApp only: user picks 1 (MCQ) or 2 (Theory).
-        # USSD never reaches this state (auto-selects MCQ in SUBJECT_SELECTION).
+        # WhatsApp only, and only reached when the subject has both MCQ and
+        # theory questions: user picks 1 (MCQ) or 2 (Theory).
+        # USSD never reaches this state (auto-selects a type in SUBJECT_SELECTION).
         if text == "1":
             question_type = "mcq"
         elif text == "2":
