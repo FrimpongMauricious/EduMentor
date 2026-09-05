@@ -60,7 +60,7 @@ export default function StudentDashboard() {
         </button>
       </header>
 
-      <InsightCard label="AI Insight" text={encouragement(data.overall_accuracy, data.total_questions)} />
+      <p className="encouragement">{encouragement(data.overall_accuracy, data.total_questions)}</p>
 
       <div className="stat-row">
         <StatCard label="Total Questions Answered" value={data.total_questions} />
@@ -68,7 +68,7 @@ export default function StudentDashboard() {
         <StatCard label="Last Active" value={formatDate(data.last_active)} />
       </div>
 
-      <InsightCard label="Recommended Focus" text={data.recommendation} />
+      <InsightCard label="AI Insight" text={data.recommendation} />
 
       <section className="section">
         <h2 className="section-title">Performance by Subject</h2>
