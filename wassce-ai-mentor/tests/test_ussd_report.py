@@ -86,7 +86,9 @@ class TestUSSDReportOption:
         assert "Accuracy: 68%" in result.response  # 15/22 -> 68.2 -> 68
         assert "Maths: 12 (75%)" in result.response
         assert "English: 10 (60%)" in result.response
-        assert "1. Maths" in result.response  # routed back to the subject menu
+        # Short "back" line, not the full re-printed subject menu.
+        assert result.response.endswith("0. Back to Menu")
+        assert "1. Maths" not in result.response
 
     def test_report_with_no_history_shows_graceful_message(self, db):
         sid = _sid()
@@ -98,9 +100,25 @@ class TestUSSDReportOption:
         assert result.new_state == FSMState.SUBJECT_SELECTION
         assert "You have not answered any questions yet" in result.response
         assert "Your Report:" not in result.response
-        assert "1. Maths" in result.response  # still routed back to the menu, not a dead end
+        assert result.response.endswith("0. Back to Menu")
+        assert "1. Maths" not in result.response
 
-    def test_report_screen_respects_ussd_pagination_limit(self, db):
+    def test_zero_from_report_screen_returns_to_subject_menu(self, db):
+        """Sending '0' after the report must behave like MENU (re-show the
+        subject list), not like STOP (end the session)."""
+        sid = _sid()
+        _seed_named_student(db, sid)
+        _to_subject_menu(db, sid)
+        handle_message(db, sid, "ussd", "5")  # view the report first
+
+        result = handle_message(db, sid, "ussd", "0")
+
+        assert result.new_state == FSMState.SUBJECT_SELECTION
+        assert result.end_session is False
+        assert "1. Maths" in result.response
+        assert "5. My Report" in result.response
+
+    def test_report_screen_fits_single_ussd_screen_without_pagination(self, db):
         sid = _sid()
         _seed_named_student(db, sid)
         _to_subject_menu(db, sid)
@@ -114,33 +132,12 @@ class TestUSSDReportOption:
 
         result = handle_message(db, sid, "ussd", "5")
 
-        # handle_message() runs every USSD response through the existing
-        # paginate_ussd() chunker, so even a full 4-subject report never
-        # exceeds one screen's worth of characters (150-char chunk + the
-        # "\n99. More" suffix = 159 max).
+        # With the full menu no longer re-appended, even a complete
+        # 4-subject report fits in a single ~150-char USSD chunk — no
+        # "99. More" pagination needed, and no mid-menu cut.
         assert len(result.response) <= 160
-
-    def test_report_pagination_continuation_via_existing_99_mechanism(self, db):
-        """A long report is chunked using the SAME '99' continuation already
-        used elsewhere in USSD — no new pagination mechanism introduced."""
-        sid = _sid()
-        _seed_named_student(db, sid)
-        _to_subject_menu(db, sid)
-
-        for i, subj in enumerate(["maths", "english", "science", "social_studies"]):
-            db.add(PerformanceVector(
-                student_id=sid, subject=subj, topic=f"topic{i}",
-                difficulty="easy", attempts=10 + i, correct=5 + i,
-            ))
-        db.commit()
-
-        first = handle_message(db, sid, "ussd", "5")
-        combined = first.response
-        if "99. More" in first.response:
-            second = handle_message(db, sid, "ussd", "99")
-            combined += second.response
-        assert "1. Maths" in combined
-        assert "Your Report:" in combined
+        assert "99. More" not in result.response
+        assert result.response.endswith("0. Back to Menu")
 
     def test_report_option_does_not_affect_whatsapp(self, db):
         """The report shortcut is USSD-only; WhatsApp '5' stays an invalid subject, unchanged."""

@@ -225,8 +225,10 @@ def _build_ussd_report(db: Session, student: Student) -> str:
         body = "\n".join(lines)
 
     # Long text is chunked automatically by the existing '99. More' USSD
-    # pagination mechanism (paginate_ussd, applied in handle_message()).
-    return body + "\n\n" + messages.subject_selection_prompt("ussd")
+    # pagination mechanism (paginate_ussd, applied in handle_message()) if
+    # it ever doesn't fit — but a short "back" line (rather than the full
+    # re-printed subject menu) keeps a typical report to one screen.
+    return body + "\n\n0. Back to Menu"
 
 
 # ─── QUESTION HELPERS ─────────────────────────────────────────────────────────
@@ -460,6 +462,16 @@ def _handle_fsm(
         )
 
     if current_state == FSMState.SUBJECT_SELECTION:
+        if channel == "ussd" and text.strip() == "0":
+            # "0. Back to Menu" from the My Report screen — re-show the
+            # subject list, same as MENU, not STOP (no session end).
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=messages.subject_selection_prompt(channel),
+                new_state=current_state,
+            )
+
         if channel == "ussd" and text.strip() == "5":
             report_text = _build_ussd_report(db, student)
             _log_interaction(db, session, student_id, channel, current_state,
