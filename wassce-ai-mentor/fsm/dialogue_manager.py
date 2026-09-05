@@ -190,6 +190,45 @@ def _save_meta(db: Session, session: SessionRow, meta: dict) -> None:
     db.commit()
 
 
+# ─── USSD "MY REPORT" HELPER ───────────────────────────────────────────────────
+
+_USSD_REPORT_SUBJECT_LABELS = {
+    "maths": "Maths",
+    "english": "English",
+    "science": "Science",
+    "social_studies": "Soc. Studies",
+}
+
+
+def _build_ussd_report(db: Session, student: Student) -> str:
+    """
+    USSD 'My Report' option — reuses the dashboard's own aggregation logic
+    (api/routes/dashboard._student_detail) so this screen can never drift
+    out of sync with what GET /api/dashboard/student/{phone} shows. No new
+    query path, no external API calls — read-only, same DB session.
+    """
+    from api.routes.dashboard import _student_detail  # local import: route layer, avoid import at module load time
+
+    detail = _student_detail(db, student)
+
+    if detail["total_questions"] == 0:
+        body = "You have not answered any questions yet. Pick a subject to start practising."
+    else:
+        lines = [
+            "Your Report:",
+            f"Total Qs: {detail['total_questions']}",
+            f"Accuracy: {detail['overall_accuracy']:.0f}%",
+        ]
+        for row in detail["by_subject"]:
+            label = _USSD_REPORT_SUBJECT_LABELS.get(row["subject"], row["subject"])
+            lines.append(f"{label}: {row['attempted']} ({row['accuracy']:.0f}%)")
+        body = "\n".join(lines)
+
+    # Long text is chunked automatically by the existing '99. More' USSD
+    # pagination mechanism (paginate_ussd, applied in handle_message()).
+    return body + "\n\n" + messages.subject_selection_prompt("ussd")
+
+
 # ─── QUESTION HELPERS ─────────────────────────────────────────────────────────
 
 def _store_question_in_session(session: SessionRow, question: dict) -> None:
@@ -421,6 +460,15 @@ def _handle_fsm(
         )
 
     if current_state == FSMState.SUBJECT_SELECTION:
+        if channel == "ussd" and text.strip() == "5":
+            report_text = _build_ussd_report(db, student)
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=report_text,
+                new_state=current_state,
+            )
+
         subject_key = parse_subject(text)
         if subject_key is None:
             _log_interaction(db, session, student_id, channel, current_state,

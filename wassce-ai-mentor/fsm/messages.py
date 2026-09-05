@@ -13,7 +13,7 @@ from fsm.states import SUBJECT_DISPLAY_NAMES
 
 def greeting(channel: str = "whatsapp") -> str:
     if channel == "ussd":
-        return "WASSCE AI Mentor\n1. Maths\n2. English\n3. Science\n4. Social Studies"
+        return "WASSCE AI Mentor\n1. Maths\n2. English\n3. Science\n4. Social Studies\n5. My Report"
     return (
         "Welcome to WASSCE AI Mentor!\n"
         "I will help you practise for your WASSCE exams.\n\n"
@@ -27,7 +27,7 @@ def greeting(channel: str = "whatsapp") -> str:
 #creating the subject selection prompt 
 def subject_selection_prompt(channel: str = "whatsapp") -> str:
     if channel == "ussd":
-        return "Pick subject:\n1. Maths\n2. English\n3. Science\n4. Social Studies"
+        return "Pick subject:\n1. Maths\n2. English\n3. Science\n4. Social Studies\n5. My Report"
     return (
         "Pick a subject:\n"
         "1. Core Mathematics\n"
@@ -236,7 +236,7 @@ def name_invalid(channel: str = "whatsapp") -> str:
 
 def name_accepted_with_menu(name: str, channel: str = "whatsapp") -> str:
     if channel == "ussd":
-        return f"Hi {name}!\n1. Maths\n2. English\n3. Science\n4. Social Studies"
+        return f"Hi {name}!\n1. Maths\n2. English\n3. Science\n4. Social Studies\n5. My Report"
     return (
         f"Hi {name}! 👋\n"
         "Pick a subject:\n"
@@ -249,7 +249,7 @@ def name_accepted_with_menu(name: str, channel: str = "whatsapp") -> str:
 
 def welcome_back(name: str, channel: str = "whatsapp") -> str:
     if channel == "ussd":
-        return f"Hi {name}!\n1. Maths\n2. English\n3. Science\n4. Social Studies"
+        return f"Hi {name}!\n1. Maths\n2. English\n3. Science\n4. Social Studies\n5. My Report"
     return (
         f"Welcome back, {name}! 👋\n"
         "Pick a subject:\n"
