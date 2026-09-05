@@ -7,7 +7,11 @@ Per FR-NFR-15: messages must use simple English appropriate for SHS students.
 Each function accepts an optional channel parameter ("whatsapp" or "ussd").
 USSD variants are terse enough to fit a single USSD screen (~160 chars).
 """
+from urllib.parse import quote
+
 from fsm.states import SUBJECT_DISPLAY_NAMES
+
+DASHBOARD_STUDENT_URL = "https://wassce-ai-mentor-react.onrender.com/student"
 
 # ─── SUBJECT MENU ─────────────────────────────────────────────────────────────
 
@@ -21,10 +25,11 @@ def greeting(channel: str = "whatsapp") -> str:
         "1. Core Mathematics\n"
         "2. English Language\n"
         "3. Integrated Science\n"
-        "4. Social Studies"
+        "4. Social Studies\n"
+        "5. Get My Report (web)"
     )
 
-#creating the subject selection prompt 
+#creating the subject selection prompt
 def subject_selection_prompt(channel: str = "whatsapp") -> str:
     if channel == "ussd":
         return "Pick subject:\n1. Maths\n2. English\n3. Science\n4. Social Studies\n5. My Report"
@@ -33,7 +38,8 @@ def subject_selection_prompt(channel: str = "whatsapp") -> str:
         "1. Core Mathematics\n"
         "2. English Language\n"
         "3. Integrated Science\n"
-        "4. Social Studies"
+        "4. Social Studies\n"
+        "5. Get My Report (web)"
     )
 
 
@@ -48,6 +54,24 @@ def subject_confirmed(subject_key: str, channel: str = "whatsapp") -> str:
     if channel == "ussd":
         return display
     return f"Great! Let's practise {display}. Sending your first question..."
+
+
+def whatsapp_report_link(e164_phone: str | None) -> str:
+    """
+    WhatsApp "Get My Report" option — points to the existing web dashboard
+    instead of rendering a report inline (WhatsApp has no screen-size
+    constraint, so there's no need to duplicate the USSD report logic here).
+    Pre-fills the phone number in the link when a valid one is on record,
+    so the student doesn't have to re-type it.
+    """
+    if e164_phone:
+        url = f"{DASHBOARD_STUDENT_URL}?phone={quote(e164_phone, safe='')}"
+        return f"View your full performance report here:\n{url}\n\nReply MENU to go back."
+    return (
+        f"View your performance report on our dashboard:\n{DASHBOARD_STUDENT_URL}\n\n"
+        "Enter your phone number there to see your report.\n"
+        "Reply MENU to go back."
+    )
 
 
 # ─── QUESTION DELIVERY ────────────────────────────────────────────────────────
@@ -243,7 +267,8 @@ def name_accepted_with_menu(name: str, channel: str = "whatsapp") -> str:
         "1. Core Mathematics\n"
         "2. English Language\n"
         "3. Integrated Science\n"
-        "4. Social Studies"
+        "4. Social Studies\n"
+        "5. Get My Report (web)"
     )
 
 
@@ -256,7 +281,8 @@ def welcome_back(name: str, channel: str = "whatsapp") -> str:
         "1. Core Mathematics\n"
         "2. English Language\n"
         "3. Integrated Science\n"
-        "4. Social Studies"
+        "4. Social Studies\n"
+        "5. Get My Report (web)"
     )
 
 

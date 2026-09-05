@@ -41,6 +41,7 @@ from test_module.engine import (
 )
 from config import get_settings
 from utils.logger import get_logger
+from utils.phone import normalise_phone, is_valid_phone
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -478,6 +479,20 @@ def _handle_fsm(
                              text, None, None, 0, 0.0)
             return DialogueResult(
                 response=report_text,
+                new_state=current_state,
+            )
+
+        if channel == "whatsapp" and text.strip() == "5":
+            # "Get My Report" — link to the existing web dashboard rather
+            # than rendering a report inline (no screen-size constraint on
+            # WhatsApp, so no need to duplicate the USSD report logic).
+            e164 = None
+            if student.phone_number and is_valid_phone(student.phone_number):
+                e164 = normalise_phone(student.phone_number)
+            _log_interaction(db, session, student_id, channel, current_state,
+                             text, None, None, 0, 0.0)
+            return DialogueResult(
+                response=messages.whatsapp_report_link(e164),
                 new_state=current_state,
             )
 

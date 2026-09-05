@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { fetchStudentDashboard, ApiError } from "../api";
 import { useAppContext } from "../context";
 
 export default function StudentLogin() {
-  const [phone, setPhone] = useState("");
+  const [searchParams] = useSearchParams();
+  // Pre-fill from a shared link (e.g. WhatsApp "Get My Report") so the
+  // student doesn't have to re-type a number they already gave the bot.
+  const [phone, setPhone] = useState(searchParams.get("phone") || "");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
