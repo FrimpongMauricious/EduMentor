@@ -18,6 +18,7 @@ USSD '99' pagination: long responses are broken into 150-char chunks delivered
 on demand via the '99' command (Feature 2).
 """
 import json
+import threading
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -189,6 +190,42 @@ def _save_meta(db: Session, session: SessionRow, meta: dict) -> None:
     """Persist the meta dict back to session_meta and commit."""
     session.session_meta = json.dumps(meta) if meta else None
     db.commit()
+
+
+# ─── AI RECOMMENDATION TRIGGER ─────────────────────────────────────────────────
+
+def _run_recommendation_check(student_id: str) -> None:
+    """
+    Opens its own DB session (safe to call from a background thread — the
+    request-scoped `db` session must not be shared across threads) and
+    regenerates the student's/teacher's/cohort's cached AI recommendation
+    if this student's total answered count just hit a multiple of 10.
+    Any failure here is logged and swallowed — it must never surface to
+    the student's chat flow, which has already completed by this point.
+    """
+    worker_db = None
+    try:
+        from db.database import get_session
+        from ai.recommendations import maybe_trigger_student_recommendation
+
+        worker_db = get_session()
+        maybe_trigger_student_recommendation(worker_db, student_id)
+    except Exception as e:
+        logger.warning(f"Recommendation trigger failed for student={student_id[:12]}...: {e}")
+    finally:
+        if worker_db is not None:
+            worker_db.close()
+
+
+def _dispatch_recommendation_check(student_id: str) -> None:
+    """
+    Fires _run_recommendation_check in a background thread so the
+    occasional LLM call (only made every 10th answer — see
+    maybe_trigger_student_recommendation) never blocks the student's chat
+    response. Tests monkeypatch this to run synchronously against an
+    isolated test DB session instead of spawning a real thread.
+    """
+    threading.Thread(target=_run_recommendation_check, args=(student_id,), daemon=True).start()
 
 
 # ─── USSD "MY REPORT" HELPER ───────────────────────────────────────────────────
@@ -654,6 +691,7 @@ def _handle_fsm(
             difficulty=current_q["difficulty"],
             correct=counted_correct,
         )
+        _dispatch_recommendation_check(student_id)
 
         session.fsm_state = FSMState.EXPLANATION.value
         session.last_active_at = datetime.now(timezone.utc)

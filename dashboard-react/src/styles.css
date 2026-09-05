@@ -360,6 +360,35 @@ a {
   color: #b3261e;
 }
 
+/* ── AI insight card ────────────────────────────────────────────────────── */
+
+.insight-card {
+  background: var(--ice);
+  border: 1px solid var(--steel);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin: 16px 0 36px;
+}
+
+.insight-card__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--blue);
+  margin: 0 0 10px;
+}
+
+.insight-card__text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--dark-text);
+  margin: 0;
+}
+
 /* ── Charts ─────────────────────────────────────────────────────────────── */
 
 .chart-block {

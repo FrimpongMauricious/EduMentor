@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DBSession
 
+from ai.recommendations import NOT_ENOUGH_DATA_STUDENT, NOT_ENOUGH_DATA_TEACHER, get_cohort_insight_text
 from config import get_settings
 from db.database import get_db
 from db.models import Interaction, PerformanceVector, Session as SessionRow, Student
@@ -107,7 +108,12 @@ def _subject_breakdown(performance_vectors: list[PerformanceVector]) -> list[dic
     ]
 
 
-def _student_detail(db: DBSession, student: Student, fallback_e164: str | None = None) -> dict:
+def _student_detail(
+    db: DBSession,
+    student: Student,
+    fallback_e164: str | None = None,
+    audience: str = "student",
+) -> dict:
     pvs = db.execute(
         select(PerformanceVector).where(PerformanceVector.student_id == student.student_id)
     ).scalars().all()
@@ -138,6 +144,11 @@ def _student_detail(db: DBSession, student: Student, fallback_e164: str | None =
 
     e164 = _resolve_e164(student, fallback_e164)
 
+    if audience == "teacher":
+        recommendation = student.teacher_recommendation_text or NOT_ENOUGH_DATA_TEACHER
+    else:
+        recommendation = student.recommendation_text or NOT_ENOUGH_DATA_STUDENT
+
     return {
         "name": student.name or "Student",
         "phone_masked": _mask_phone(e164) if e164 else "unknown",
@@ -146,6 +157,7 @@ def _student_detail(db: DBSession, student: Student, fallback_e164: str | None =
         "by_subject": _subject_breakdown(pvs),
         "recent_activity": recent_activity,
         "last_active": student.last_seen_at.isoformat() if student.last_seen_at else None,
+        "recommendation": recommendation,
     }
 
 
@@ -169,7 +181,7 @@ async def student_dashboard(phone: str, request: Request, db: DBSession = Depend
     if not student:
         return _error(404, "No student found with that number")
 
-    return _student_detail(db, student, fallback_e164=e164)
+    return _student_detail(db, student, fallback_e164=e164)  # audience="student" (default) — shared with Guardian
 
 
 @router.get("/teacher/overview")
@@ -216,6 +228,7 @@ async def teacher_overview(
         "overall_accuracy": overall_accuracy,
         "by_subject": _subject_breakdown(pvs),
         "students": student_rows,
+        "insights": get_cohort_insight_text(db),
     }
 
 
@@ -232,4 +245,4 @@ async def teacher_student_detail(
     if not student:
         return _error(404, "No student found with that number")
 
-    return _student_detail(db, student, fallback_e164=e164)
+    return _student_detail(db, student, fallback_e164=e164, audience="teacher")

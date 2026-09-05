@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import StatCard from "./StatCard";
 import SubjectTable from "./SubjectTable";
 import BarChart from "./BarChart";
+import InsightCard from "./InsightCard";
 import { fetchTeacherStudentDetail, ApiError } from "../api";
 import { useAppContext } from "../context";
 import { subjectLabel } from "../theme";
@@ -83,6 +84,8 @@ export default function StudentDetail() {
             <StatCard label="Overall Accuracy" value={`${data.overall_accuracy}%`} accent />
             <StatCard label="Last Active" value={formatDate(data.last_active)} />
           </div>
+
+          <InsightCard label="Suggested Action" text={data.recommendation} />
 
           <section className="section">
             <h2 className="section-title">Performance by Subject</h2>

@@ -18,6 +18,13 @@ class Student(Base):
     session_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     consent_given: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    # AI recommendations — recomputed every N answers (see
+    # fsm/dialogue_manager._dispatch_recommendation_check /
+    # ai/recommendations.py), never generated live on a dashboard read.
+    recommendation_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    teacher_recommendation_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recommendation_generated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="student")
 
 
@@ -84,6 +91,21 @@ class TestAttempt(Base):
     responses: Mapped[str | None] = mapped_column(Text, nullable=True)
     total_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     subject_scores: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class CohortInsight(Base):
+    """
+    Singleton cache (id=1) for the teacher overview's class-wide AI insight.
+    Refreshed opportunistically alongside per-student recommendation
+    triggers (see ai/recommendations.refresh_cohort_insight) — never
+    generated live on a dashboard read.
+    """
+    __tablename__ = "cohort_insights"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    insight_text: Mapped[str] = mapped_column(Text, nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    based_on_total_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 # Alias to avoid clash with sqlalchemy.orm.Session in importing modules.

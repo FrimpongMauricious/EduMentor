@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import StatCard from "./StatCard";
 import SubjectTable from "./SubjectTable";
 import BarChart from "./BarChart";
+import InsightCard from "./InsightCard";
 import { fetchTeacherOverview, ApiError } from "../api";
 import { useAppContext } from "../context";
 
@@ -101,6 +102,8 @@ export default function TeacherDashboard() {
         <StatCard label="Questions Answered" value={data.total_questions_answered} />
         <StatCard label="Overall Accuracy" value={`${data.overall_accuracy}%`} accent />
       </div>
+
+      <InsightCard label="Cohort Insight" text={data.insights} />
 
       <section className="section">
         <h2 className="section-title">Accuracy by Subject</h2>

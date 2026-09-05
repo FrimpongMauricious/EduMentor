@@ -46,6 +46,7 @@ def init_db():
     _migrate_add_session_meta()
     _migrate_add_phone_number()
     _migrate_add_student_name()
+    _migrate_add_recommendation_fields()
 
 
 def _migrate_add_session_meta() -> None:
@@ -88,6 +89,24 @@ def _migrate_add_student_name() -> None:
         with engine.connect() as conn:
             conn.execute(text("ALTER TABLE students ADD COLUMN name TEXT"))
             conn.commit()
+
+
+def _migrate_add_recommendation_fields() -> None:
+    """Add AI-recommendation columns to students table if missing (safe to call repeatedly)."""
+    from sqlalchemy import inspect, text
+    inspector = inspect(engine)
+    try:
+        columns = [col["name"] for col in inspector.get_columns("students")]
+    except Exception:
+        return
+    with engine.connect() as conn:
+        if "recommendation_text" not in columns:
+            conn.execute(text("ALTER TABLE students ADD COLUMN recommendation_text TEXT"))
+        if "teacher_recommendation_text" not in columns:
+            conn.execute(text("ALTER TABLE students ADD COLUMN teacher_recommendation_text TEXT"))
+        if "recommendation_generated_at" not in columns:
+            conn.execute(text("ALTER TABLE students ADD COLUMN recommendation_generated_at DATETIME"))
+        conn.commit()
 
 
 def get_session():

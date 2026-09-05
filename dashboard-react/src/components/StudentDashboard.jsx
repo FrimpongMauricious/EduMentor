@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import StatCard from "./StatCard";
 import SubjectTable from "./SubjectTable";
 import BarChart from "./BarChart";
+import InsightCard from "./InsightCard";
 import { subjectLabel } from "../theme";
 
 function formatDate(iso) {
@@ -66,6 +67,8 @@ export default function StudentDashboard() {
         <StatCard label="Overall Accuracy" value={`${data.overall_accuracy}%`} accent />
         <StatCard label="Last Active" value={formatDate(data.last_active)} />
       </div>
+
+      <InsightCard label="Recommended Focus" text={data.recommendation} />
 
       <section className="section">
         <h2 className="section-title">Performance by Subject</h2>
