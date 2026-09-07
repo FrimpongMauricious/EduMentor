@@ -36,6 +36,29 @@ What this script does, inside a single DB transaction:
   5. Deletes the --retire Student row.
   6. Prints a before/after summary (attempts, interactions, sessions,
      test_attempts) so you can confirm total counts are preserved.
+  7. If the merged --keep record's total answered questions is now >= the
+     recommendation feature's threshold (ai.recommendations.
+     RECOMMENDATION_TRIGGER_EVERY, currently 10), force-regenerates its
+     cached student- and teacher-framed recommendations and refreshes the
+     cohort insight — see "Recommendation regeneration" below for why.
+
+Recommendation regeneration (step 7): ai.recommendations.
+maybe_trigger_student_recommendation() fires ONLY on the exact interaction
+that pushes a student's live total answered-question count (summed fresh
+from performance_vectors on every call — there is no stored "last
+triggered at" checkpoint anywhere in the schema) across an exact multiple
+of RECOMMENDATION_TRIGGER_EVERY. A merge changes that live total in one
+step, out of band from the normal answer-by-answer flow, and there is no
+guarantee the new combined total lands on a multiple of 10 (e.g. 119 + 6 =
+125 does not). Left alone, the merged record would sit there — however far
+past the threshold — showing whatever recommendation text was cached
+before the merge (or NULL, which the dashboard API renders as the generic
+"not enough data yet" placeholder) until enough NEW organic answers
+happened to arrive to reach the next boundary. Step 7 closes that gap by
+calling ai.recommendations.generate_student_recommendation() directly
+(bypassing the modulo gate, which is correct here — the merge itself is
+the event that invalidates the cache) whenever the post-merge total already
+qualifies, so a merged student is never left stuck.
 
 What it deliberately does NOT try to reconcile: --keep's Student.channel
 stays whatever it already was — a student who used both WhatsApp and USSD
@@ -58,6 +81,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db.database import SessionLocal
 from db.models import Student, SessionRow, Interaction, PerformanceVector, TestAttempt
+from ai.recommendations import (
+    generate_student_recommendation,
+    refresh_cohort_insight,
+    RECOMMENDATION_TRIGGER_EVERY,
+)
 
 
 def _counts(db, student_id: str) -> dict:
@@ -189,6 +217,37 @@ def merge(keep_id: str, retire_id: str, execute: bool) -> None:
             print(
                 f"\nWARNING: interactions after merge ({after_keep['interactions']}) != "
                 f"expected ({expected_interactions}). Investigate before trusting this record."
+            )
+
+        # Step 7: force a recommendation refresh if the merged total already
+        # qualifies — see "Recommendation regeneration" in the module
+        # docstring for why this can't just wait for the normal trigger.
+        if after_keep["attempts"] >= RECOMMENDATION_TRIGGER_EVERY:
+            print(
+                f"\nMerged total ({after_keep['attempts']}) is at/above the "
+                f"recommendation threshold ({RECOMMENDATION_TRIGGER_EVERY}) - "
+                f"force-regenerating cached recommendations (real LLM calls)..."
+            )
+            try:
+                result = generate_student_recommendation(db, keep, audience="student")
+                print(f"  student recommendation  -> {result['text']!r}")
+            except Exception as e:
+                print(f"  WARNING: student recommendation generation failed: {e}")
+            try:
+                result = generate_student_recommendation(db, keep, audience="teacher")
+                print(f"  teacher recommendation  -> {result['text']!r}")
+            except Exception as e:
+                print(f"  WARNING: teacher recommendation generation failed: {e}")
+            try:
+                result = refresh_cohort_insight(db)
+                print(f"  cohort insight refreshed -> {result['text']!r}")
+            except Exception as e:
+                print(f"  WARNING: cohort insight refresh failed: {e}")
+        else:
+            print(
+                f"\nMerged total ({after_keep['attempts']}) is below the "
+                f"recommendation threshold ({RECOMMENDATION_TRIGGER_EVERY}) - "
+                f"nothing to regenerate yet."
             )
     except Exception:
         db.rollback()
