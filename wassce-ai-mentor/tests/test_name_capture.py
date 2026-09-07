@@ -320,6 +320,35 @@ class TestBugFixes:
         assert result.new_state == FSMState.NAME_ENTRY
         assert "name" in result.response.lower()
 
+    def test_existing_ussd_user_with_null_name_gets_prompted(self, db):
+        """Bug 1 applies to USSD too: the null-name guard is channel-agnostic
+        (handle_message() is the single shared entry point for both webhooks),
+        so a pre-deployment USSD student with name=NULL must also be redirected
+        to NAME_ENTRY on their next contact, even from a stale non-NAME_ENTRY
+        session state."""
+        from db.models import Student, SessionRow
+        from datetime import datetime, timezone
+        sid = _sid()
+        student = Student(
+            student_id=sid,
+            channel="ussd",
+            name=None,
+            registered_at=datetime.now(timezone.utc),
+            last_seen_at=datetime.now(timezone.utc),
+        )
+        db.add(student)
+        db.commit()
+
+        # Simulate a stale pre-fix session left mid-flow.
+        handle_message(db, sid, "ussd", "")
+        session = db.query(SessionRow).filter(SessionRow.student_id == sid).first()
+        session.fsm_state = "SUBJECT_SELECTION"
+        db.commit()
+
+        result = handle_message(db, sid, "ussd", "1")
+        assert result.new_state == FSMState.NAME_ENTRY
+        assert "name" in result.response.lower()
+
     def test_greeting_resets_state_from_explanation(self, db):
         """Bug 2: sending 'hi' from EXPLANATION state resets to subject selection."""
         sid = _sid()
