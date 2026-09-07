@@ -93,19 +93,27 @@ def _migrate_add_student_name() -> None:
 
 def _migrate_add_recommendation_fields() -> None:
     """Add AI-recommendation columns to students table if missing (safe to call repeatedly)."""
-    from sqlalchemy import inspect, text
+    from sqlalchemy import inspect, text, DateTime
     inspector = inspect(engine)
     try:
         columns = [col["name"] for col in inspector.get_columns("students")]
     except Exception:
         return
+    # Compile against the live engine's dialect so this renders TIMESTAMP
+    # WITHOUT TIME ZONE on PostgreSQL (prod/Neon) and DATETIME on SQLite
+    # (local dev) — matching the naive-datetime DateTime columns already
+    # used throughout db/models.py — instead of hardcoding a SQLite-only
+    # type name that PostgreSQL rejects.
+    datetime_type = DateTime().compile(dialect=engine.dialect)
     with engine.connect() as conn:
         if "recommendation_text" not in columns:
             conn.execute(text("ALTER TABLE students ADD COLUMN recommendation_text TEXT"))
         if "teacher_recommendation_text" not in columns:
             conn.execute(text("ALTER TABLE students ADD COLUMN teacher_recommendation_text TEXT"))
         if "recommendation_generated_at" not in columns:
-            conn.execute(text("ALTER TABLE students ADD COLUMN recommendation_generated_at DATETIME"))
+            conn.execute(text(
+                f"ALTER TABLE students ADD COLUMN recommendation_generated_at {datetime_type}"
+            ))
         conn.commit()
 
 
