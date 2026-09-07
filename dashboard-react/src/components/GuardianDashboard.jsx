@@ -58,9 +58,14 @@ export default function GuardianDashboard() {
           <h1 className="page-title page-title--sm">Performance Summary for {data.name}</h1>
           <p className="page-subtitle">{data.phone_masked}</p>
         </div>
-        <button className="btn btn--secondary" onClick={() => navigate("/guardian")}>
-          Enter a Different Number
-        </button>
+        <div className="header-actions">
+          <button className="btn btn--secondary" onClick={() => navigate("/guardian/leaderboard")}>
+            Leaderboard
+          </button>
+          <button className="btn btn--secondary" onClick={() => navigate("/guardian")}>
+            Enter a Different Number
+          </button>
+        </div>
       </header>
 
       <p className="encouragement">{encouragement(data.overall_accuracy, data.total_questions)}</p>

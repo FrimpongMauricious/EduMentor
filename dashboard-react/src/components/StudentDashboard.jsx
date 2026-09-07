@@ -55,9 +55,14 @@ export default function StudentDashboard() {
           <h1 className="page-title page-title--sm">Welcome, {data.name}</h1>
           <p className="page-subtitle">{data.phone_masked}</p>
         </div>
-        <button className="btn btn--secondary" onClick={() => navigate("/student")}>
-          Enter a Different Number
-        </button>
+        <div className="header-actions">
+          <button className="btn btn--secondary" onClick={() => navigate("/student/leaderboard")}>
+            Leaderboard
+          </button>
+          <button className="btn btn--secondary" onClick={() => navigate("/student")}>
+            Enter a Different Number
+          </button>
+        </div>
       </header>
 
       <p className="encouragement">{encouragement(data.overall_accuracy, data.total_questions)}</p>

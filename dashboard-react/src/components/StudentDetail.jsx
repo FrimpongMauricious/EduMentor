@@ -69,9 +69,14 @@ export default function StudentDetail() {
           <h1 className="page-title page-title--sm">{data ? data.name : "Student"}</h1>
           {data && <p className="page-subtitle">{data.phone_masked}</p>}
         </div>
-        <button className="btn btn--secondary" onClick={() => navigate("/teacher/dashboard")}>
-          Back to Cohort
-        </button>
+        <div className="header-actions">
+          <button className="btn btn--secondary" onClick={() => navigate("/teacher/leaderboard")}>
+            Leaderboard
+          </button>
+          <button className="btn btn--secondary" onClick={() => navigate("/teacher/dashboard")}>
+            Back to Cohort
+          </button>
+        </div>
       </header>
 
       {loading && <p className="empty-note">Loading student record...</p>}

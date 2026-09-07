@@ -8,6 +8,7 @@ import GuardianDashboard from "./components/GuardianDashboard";
 import TeacherLogin from "./components/TeacherLogin";
 import TeacherDashboard from "./components/TeacherDashboard";
 import StudentDetail from "./components/StudentDetail";
+import Leaderboard from "./components/Leaderboard";
 
 export default function App() {
   return (
@@ -21,6 +22,9 @@ export default function App() {
         <Route path="/teacher" element={<TeacherLogin />} />
         <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
         <Route path="/teacher/student/:phone" element={<StudentDetail />} />
+        <Route path="/student/leaderboard" element={<Leaderboard audience="student" />} />
+        <Route path="/guardian/leaderboard" element={<Leaderboard audience="guardian" />} />
+        <Route path="/teacher/leaderboard" element={<Leaderboard audience="teacher" />} />
       </Routes>
     </AppProvider>
   );

@@ -9,6 +9,14 @@
   --dark-text: #1b2a3a;
   --success: #2e7d5b;
   --warning: #b7791f;
+
+  /* Leaderboard rank accents — muted gold/silver/bronze, kept close in
+     tone to the rest of the palette (--warning, --gray) rather than
+     saturated medal colors, so they read as "ranking" without clashing
+     with the formal blue/white theme. */
+  --rank-gold: #c9971f;
+  --rank-silver: #8a97a6;
+  --rank-bronze: #b0723f;
 }
 
 * {
@@ -59,6 +67,13 @@ a {
   margin-bottom: 24px;
   padding-bottom: 20px;
   border-bottom: 1px solid #d7e3f2;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 /* ── Cards ──────────────────────────────────────────────────────────────── */
@@ -358,6 +373,88 @@ a {
 .accuracy-pill--weak {
   background: #fbe9e8;
   color: #b3261e;
+}
+
+/* ── Leaderboard ────────────────────────────────────────────────────────── */
+
+.subject-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: -8px 0 20px;
+}
+
+.subject-tab {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--steel);
+  background: var(--white);
+  color: var(--blue);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.subject-tab:hover {
+  background: var(--ice);
+}
+
+.subject-tab--active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: var(--white);
+}
+
+.leaderboard-row--you {
+  background: var(--ice);
+}
+
+.leaderboard-row--you:hover {
+  background: var(--ice);
+}
+
+.you-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--blue);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--light-bg);
+  color: var(--gray);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.rank-badge--gold {
+  background: var(--rank-gold);
+  color: var(--white);
+}
+
+.rank-badge--silver {
+  background: var(--rank-silver);
+  color: var(--white);
+}
+
+.rank-badge--bronze {
+  background: var(--rank-bronze);
+  color: var(--white);
 }
 
 /* ── AI insight card ────────────────────────────────────────────────────── */

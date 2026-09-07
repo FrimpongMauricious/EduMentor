@@ -11,8 +11,9 @@ pipeline the WhatsApp and USSD webhooks already use, so a phone number typed on
 the dashboard (in any of the accepted formats) resolves to exactly the same
 student record regardless of which channel the student actually used.
 """
+import math
 import time
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Header, Request
@@ -37,6 +38,7 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 logger = get_logger(__name__)
 
 EXCLUDED_RESULTS = ("skip", "no_question")
+VALID_SUBJECTS = {"maths", "english", "science", "social_studies"}
 
 # ── Rate limiting (in-memory, per-IP) ───────────────────────────────────────
 # A simple sliding-window counter is enough for a single-process student
@@ -112,6 +114,113 @@ def _subject_breakdown(performance_vectors: list[PerformanceVector]) -> list[dic
         }
         for subject, row in sorted(agg.items())
     ]
+
+
+# ── Leaderboard ──────────────────────────────────────────────────────────────
+#
+# Ranking metric: the Wilson score interval lower bound on accuracy (95%
+# confidence), NOT raw accuracy. Raw accuracy alone lets a student with a
+# tiny number of lucky answers (e.g. 3/3 = 100%) outrank a student with
+# substantially more evidence of real understanding (e.g. 95/100 = 95%) —
+# exactly backwards. The Wilson lower bound answers "what's the accuracy
+# this student's record is at LEAST consistent with, at 95% confidence?",
+# which is naturally pulled toward 0 for small samples (wide uncertainty)
+# and converges toward the raw accuracy as attempts grow (tight
+# uncertainty) — so it rewards both correctness AND volume, in one
+# principled formula, without needing to hand-tune a separate volume
+# weight. This is the same interval used for Reddit's "best" comment
+# ranking, for the same reason.
+_WILSON_Z = 1.96  # 95% confidence
+
+
+def _wilson_lower_bound(correct: int, attempts: int) -> float:
+    """Lower bound of the Wilson score confidence interval for a binomial
+    proportion (correct out of attempts), as a fraction in [0, 1]."""
+    if attempts == 0:
+        return 0.0
+    p = correct / attempts
+    n = attempts
+    z2 = _WILSON_Z ** 2
+    denominator = 1 + z2 / n
+    center = p + z2 / (2 * n)
+    margin = _WILSON_Z * math.sqrt((p * (1 - p) / n) + (z2 / (4 * n ** 2)))
+    return (center - margin) / denominator
+
+
+def _compute_leaderboard(db: DBSession, subject: str | None) -> list[dict]:
+    """
+    Rank every student with at least one answered question in scope
+    (overall if subject is None, else that one subject) by
+    _wilson_lower_bound, descending. Ties broken by more total attempts,
+    then alphabetically by name, for a fully deterministic order.
+
+    Students with zero attempts in scope are excluded entirely — not
+    given a rank or a nonsensical 0% score — since a Wilson bound isn't
+    meaningful with zero evidence either way.
+
+    Reuses the same PerformanceVector rows _subject_breakdown() and
+    /teacher/overview already aggregate from — no new query pattern.
+    """
+    query = select(PerformanceVector)
+    if subject:
+        query = query.where(PerformanceVector.subject == subject)
+    pvs = db.execute(query).scalars().all()
+
+    per_student: dict[str, dict] = defaultdict(lambda: {"attempts": 0, "correct": 0})
+    for pv in pvs:
+        row = per_student[pv.student_id]
+        row["attempts"] += pv.attempts
+        row["correct"] += pv.correct
+
+    students_by_id = {s.student_id: s for s in db.execute(select(Student)).scalars().all()}
+
+    rows = []
+    for student_id, agg in per_student.items():
+        if agg["attempts"] == 0:
+            continue
+        student = students_by_id.get(student_id)
+        if student is None:
+            continue
+        rows.append({
+            "student_id": student_id,
+            "name": student.name or "Student",
+            "attempts": agg["attempts"],
+            "correct": agg["correct"],
+            "accuracy": round(agg["correct"] / agg["attempts"] * 100, 1),
+            "score": round(_wilson_lower_bound(agg["correct"], agg["attempts"]) * 100, 1),
+        })
+
+    rows.sort(key=lambda r: (-r["score"], -r["attempts"], r["name"].lower()))
+    for idx, row in enumerate(rows, start=1):
+        row["rank"] = idx
+    return rows
+
+
+def _first_name(full_name: str) -> str:
+    parts = (full_name or "Student").strip().split()
+    return parts[0] if parts else "Student"
+
+
+def _masked_display_names(rows: list[dict]) -> dict[str, str]:
+    """
+    Map student_id -> masked display name for a set of ranked rows:
+    first name only, upgraded to "First L." when that first name collides
+    with another student's in this same result set (so two "Ama"s don't
+    render as indistinguishable rows).
+    """
+    first_names = {row["student_id"]: _first_name(row["name"]) for row in rows}
+    counts = Counter(fn.lower() for fn in first_names.values())
+
+    display = {}
+    for row in rows:
+        first = first_names[row["student_id"]]
+        if counts[first.lower()] > 1:
+            parts = (row["name"] or "Student").strip().split()
+            last_initial = f" {parts[-1][0].upper()}." if len(parts) > 1 else ""
+            display[row["student_id"]] = f"{first}{last_initial}"
+        else:
+            display[row["student_id"]] = first
+    return display
 
 
 def _student_detail(
@@ -195,6 +304,64 @@ async def student_dashboard(phone: str, request: Request, db: DBSession = Depend
     return _student_detail(db, student, fallback_e164=e164)  # audience="student" (default) — shared with Guardian
 
 
+@router.get("/leaderboard")
+async def leaderboard(
+    request: Request,
+    subject: str | None = None,
+    phone: str | None = None,
+    db: DBSession = Depends(get_db),
+):
+    """
+    Student/Guardian-facing leaderboard. `subject` omitted = overall;
+    otherwise one of VALID_SUBJECTS. `phone` (optional) is the viewer's own
+    number — used only to identify and unmask their own row; every other
+    row is shown first-name-only (see _masked_display_names). Reuses the
+    same rate limiting as the student lookup endpoint since it's just as
+    public (no password).
+    """
+    if _rate_limited(_client_ip(request)):
+        return _error(429, "Too many requests. Please wait a moment and try again.")
+    if subject is not None and subject not in VALID_SUBJECTS:
+        return _error(400, "Unknown subject.")
+
+    rows = _compute_leaderboard(db, subject)
+    display_names = _masked_display_names(rows)
+
+    viewer_student_id = None
+    if phone:
+        try:
+            normalise_phone(phone)  # validate shape; ignore the normalised value itself
+            viewer_student_id = phone_to_student_id(phone)
+        except ValueError:
+            viewer_student_id = None
+
+    rankings = []
+    viewer = None
+    for row in rows:
+        is_you = viewer_student_id is not None and row["student_id"] == viewer_student_id
+        entry = {
+            "rank": row["rank"],
+            "name": row["name"] if is_you else display_names[row["student_id"]],
+            "is_you": is_you,
+            "score": row["score"],
+            "accuracy": row["accuracy"],
+            "attempts": row["attempts"],
+        }
+        rankings.append(entry)
+        if is_you:
+            viewer = {"has_data": True, **entry}
+
+    if viewer_student_id is not None and viewer is None:
+        viewer = {"has_data": False}  # a real viewer, but zero attempts in this scope
+
+    return {
+        "subject": subject,
+        "rankings": rankings,
+        "viewer": viewer,
+        "total_ranked": len(rankings),
+    }
+
+
 @router.get("/teacher/overview")
 async def teacher_overview(
     db: DBSession = Depends(get_db),
@@ -259,3 +426,36 @@ async def teacher_student_detail(
         return _error(404, "No student found with that number")
 
     return _student_detail(db, student, fallback_e164=e164, audience="teacher")
+
+
+@router.get("/teacher/leaderboard")
+async def teacher_leaderboard(
+    subject: str | None = None,
+    db: DBSession = Depends(get_db),
+    x_dashboard_password: str | None = Header(default=None),
+):
+    """
+    Teacher-facing leaderboard: same ranking as GET /leaderboard, but full
+    names throughout, no masking. Consistent with every other teacher
+    endpoint in this file (/teacher/overview, /teacher/student/{phone}),
+    which already show full names — masking here would be a strictly less
+    private but more confusing experience for a viewer who already has
+    full access to every student's name elsewhere in the same app.
+    """
+    if not _teacher_authorized(x_dashboard_password):
+        return _error(403, "Incorrect or missing dashboard password.")
+    if subject is not None and subject not in VALID_SUBJECTS:
+        return _error(400, "Unknown subject.")
+
+    rows = _compute_leaderboard(db, subject)
+    rankings = [
+        {
+            "rank": row["rank"],
+            "name": row["name"],
+            "score": row["score"],
+            "accuracy": row["accuracy"],
+            "attempts": row["attempts"],
+        }
+        for row in rows
+    ]
+    return {"subject": subject, "rankings": rankings, "total_ranked": len(rankings)}

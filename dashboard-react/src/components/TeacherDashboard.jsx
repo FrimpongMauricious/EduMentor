@@ -90,9 +90,14 @@ export default function TeacherDashboard() {
           <p className="eyebrow">WASSCE AI Mentor</p>
           <h1 className="page-title page-title--sm">Cohort Overview</h1>
         </div>
-        <button className="btn btn--secondary" onClick={refresh} disabled={loading}>
-          {loading ? "Refreshing..." : "Refresh"}
-        </button>
+        <div className="header-actions">
+          <button className="btn btn--secondary" onClick={() => navigate("/teacher/leaderboard")}>
+            Leaderboard
+          </button>
+          <button className="btn btn--secondary" onClick={refresh} disabled={loading}>
+            {loading ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
       </header>
 
       {error && <p className="form-error">{error}</p>}

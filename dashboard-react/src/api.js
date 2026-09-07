@@ -47,3 +47,20 @@ export function fetchTeacherStudentDetail(password, phone) {
     headers: { "X-Dashboard-Password": password },
   });
 }
+
+export function fetchLeaderboard(subject, phone) {
+  const params = new URLSearchParams();
+  if (subject) params.set("subject", subject);
+  if (phone) params.set("phone", phone);
+  const qs = params.toString();
+  return request(`/api/dashboard/leaderboard${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchTeacherLeaderboard(password, subject) {
+  const params = new URLSearchParams();
+  if (subject) params.set("subject", subject);
+  const qs = params.toString();
+  return request(`/api/dashboard/teacher/leaderboard${qs ? `?${qs}` : ""}`, {
+    headers: { "X-Dashboard-Password": password },
+  });
+}
