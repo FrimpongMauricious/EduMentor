@@ -22,6 +22,7 @@ itself whenever the merged total already qualifies.
 Every test here mocks the actual LLM call (ai.recommendations._call_llm),
 matching the convention in tests/test_recommendations.py.
 """
+import json
 import uuid
 from datetime import datetime, timezone
 
@@ -92,7 +93,7 @@ class TestMergeForcesRecommendationRegeneration:
         _seed_attempts(db, keep_id, "maths", "algebra", attempts=119, correct=67)
         _seed_attempts(db, retire_id, "maths", "algebra", attempts=6, correct=4)
 
-        monkeypatch.setattr(recs, "_call_llm", lambda prompt: "Focus on algebra practice.")
+        monkeypatch.setattr(recs, "_call_llm", lambda prompt: json.dumps(["Focus on algebra practice."]))
         monkeypatch.setattr("builtins.input", lambda _: "MERGE")
 
         merge_script.merge(keep_id, retire_id, execute=True)
@@ -100,8 +101,8 @@ class TestMergeForcesRecommendationRegeneration:
 
         merged = db.get(Student, keep_id)
         assert 125 % recs.RECOMMENDATION_TRIGGER_EVERY != 0  # sanity: confirms the scenario
-        assert merged.recommendation_text == "Focus on algebra practice."
-        assert merged.teacher_recommendation_text == "Focus on algebra practice."
+        assert json.loads(merged.recommendation_text) == ["Focus on algebra practice."]
+        assert json.loads(merged.teacher_recommendation_text) == ["Focus on algebra practice."]
         assert merged.recommendation_generated_at is not None
 
         total_attempts = sum(

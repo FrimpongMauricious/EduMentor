@@ -16,6 +16,8 @@ answers, no invented facts. _GROUNDING_RULES additionally instructs the
 model not to fabricate specificity beyond what's provided, and to say
 something honest and generic when the data is too sparse.
 """
+import json
+import re
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
@@ -32,7 +34,10 @@ logger = get_logger(__name__)
 # is regenerated. Must match the check in dialogue_manager's trigger.
 RECOMMENDATION_TRIGGER_EVERY = 10
 
-MAX_RECOMMENDATION_CHARS = 400
+# Recommendations are stored and served as a short list of bullet points
+# rather than a paragraph (see _parse_llm_bullets / _parse_stored_bullets).
+MAX_BULLETS = 6
+MAX_BULLET_CHARS = 150
 
 SUBJECT_DISPLAY = {
     "maths": "Mathematics",
@@ -54,27 +59,31 @@ NOT_ENOUGH_DATA_COHORT = (
     "back once more students have answered questions."
 )
 
-_GROUNDING_RULES = """RULES — follow these exactly:
+_GROUNDING_RULES = f"""RULES — follow these exactly:
 - Use ONLY the data provided below. Do not invent, assume, or guess any fact not present in it (no topic names, scores, or events that aren't listed).
 - If the data is too sparse to say something specific, say something honest and generic instead of fabricating detail.
-- Keep the response to 2-4 sentences, under 400 characters total.
-- Plain sentences only — no markdown, no headers, no bullet points."""
+- Output a SHORT LIST OF BULLET POINTS, not a paragraph. Each bullet must be one clear, concise, actionable point — not a run-on sentence, under {MAX_BULLET_CHARS} characters.
+- Use as many bullets as genuinely useful and grounded in the real data (e.g. more than one weak subject/topic each deserve their own bullet) — do not pad with filler points just to hit a number.
+- Never use more than {MAX_BULLETS} bullets. If there's more that could be said, keep only the {MAX_BULLETS} most impactful points.
+- Return ONLY a JSON array of strings, one string per bullet point — no markdown, no numbering, no headers, no prose outside the array. Example: ["Bullet one.", "Bullet two."]"""
 
 _STUDENT_FRAMING = (
-    "Write DIRECTLY to the student, addressing them as 'you'. Tell them "
-    "specifically what to focus on next and how, based only on the data below. "
-    "This same message may also be read by a parent/guardian supporting the "
-    "student, so keep it something a supportive adult could act on too."
+    "Write DIRECTLY to the student, addressing them as 'you'. Each bullet "
+    "should tell them specifically what to focus on next and how, based "
+    "only on the data below. This same list may also be read by a parent/"
+    "guardian supporting the student, so keep it something a supportive "
+    "adult could act on too."
 )
 _TEACHER_FRAMING = (
-    "Write to this student's teacher. Recommend ONE specific action the "
-    "teacher could take to help this individual student, based only on the "
-    "data below."
+    "Write to this student's teacher. Each bullet should be one specific "
+    "action the teacher could take to help this individual student, based "
+    "only on the data below."
 )
 _COHORT_FRAMING = (
     "Write a class-wide insight for a teacher, based on the cohort data "
-    "below. Point out one pattern worth addressing across the class and "
-    "suggest one concrete action (e.g. a focused review session)."
+    "below. Each bullet should point out one pattern worth addressing "
+    "across the class or one concrete action (e.g. a focused review "
+    "session) — grounded only in the data below."
 )
 
 
@@ -90,13 +99,64 @@ def _model_name() -> str:
     return _MODEL_NAME
 
 
-def _truncate(text: str, limit: int = MAX_RECOMMENDATION_CHARS) -> str:
+def _truncate(text: str, limit: int = MAX_BULLET_CHARS) -> str:
     text = (text or "").strip()
     if len(text) <= limit:
         return text
     # Reserve one character for the ellipsis so the result never exceeds `limit`.
     cut = text[:limit - 1].rsplit(" ", 1)[0] or text[:limit - 1]
     return cut.rstrip(".,;: ") + "…"
+
+
+def _parse_llm_bullets(raw: str) -> Optional[list[str]]:
+    """
+    Parse the model's raw response into a validated, capped list of bullet
+    strings. Expected shape: a JSON array of strings, optionally wrapped in
+    a ```json code fence — the same shape/parsing pattern already used for
+    grading responses in rag/grader.py::grade_open() (strip fences,
+    json.loads, validate).
+
+    Returns None on any malformed/unparseable output; the caller falls back
+    to whatever was already cached rather than showing broken data.
+    """
+    if not raw:
+        return None
+    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
+    try:
+        parsed = json.loads(cleaned)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(parsed, list):
+        return None
+    bullets = [_truncate(item) for item in parsed if isinstance(item, str) and item.strip()]
+    if not bullets:
+        return None
+    return bullets[:MAX_BULLETS]
+
+
+def _parse_stored_bullets(raw: Optional[str], not_enough_data_text: str) -> tuple[list[str], bool]:
+    """
+    Parse a Student.recommendation_text / teacher_recommendation_text /
+    CohortInsight.insight_text column value into (bullets, has_data).
+
+    Backward compatible with pre-bullets plain-string values — including
+    real production rows generated before this change shipped: any stored
+    value that isn't a JSON array of strings (a plain paragraph, most
+    likely) is wrapped as a single-item list instead of raising, so old
+    data renders as one bullet rather than crashing the read path.
+    """
+    if not raw:
+        return [not_enough_data_text], False
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return [raw], True  # legacy plain-string value — treat as one real bullet
+    if isinstance(parsed, list) and parsed and all(isinstance(b, str) and b.strip() for b in parsed):
+        bullets = [b.strip() for b in parsed]
+        return bullets, bullets != [not_enough_data_text]
+    # Valid JSON but not the shape we expect — fall back to the raw stored
+    # text as a single legacy bullet rather than losing it.
+    return [raw], True
 
 
 def _call_llm(prompt: str) -> Optional[str]:
@@ -156,15 +216,18 @@ def generate_student_recommendation(
     Generates (or, on LLM failure, preserves) the cached recommendation for
     one student and one audience, persisting it on the Student row.
 
-    "student" and "guardian" share the same cached field/text by design —
+    "student" and "guardian" share the same cached field/bullets by design —
     the Student and Guardian dashboards call the identical
     GET /api/dashboard/student/{phone} endpoint and render the identical
     response (see api/routes/dashboard.py), so there is exactly one
-    audience-appropriate text for that surface: written to the student as
+    audience-appropriate list for that surface: written to the student as
     "you", legible to a guardian reading alongside them. "teacher" gets its
-    own distinct, separately-cached, action-oriented text.
+    own distinct, separately-cached, action-oriented list.
 
-    Returns {"text": str, "generated_at": iso8601 str, "has_data": bool}.
+    Stored on the Student row as a JSON-encoded array of bullet strings
+    (the column stays Text — see _parse_stored_bullets for why no schema
+    migration was needed). Returns
+    {"bullets": list[str], "generated_at": iso8601 str, "has_data": bool}.
     """
     field = "recommendation_text" if audience == "student" else "teacher_recommendation_text"
     not_enough_data_text = NOT_ENOUGH_DATA_STUDENT if audience == "student" else NOT_ENOUGH_DATA_TEACHER
@@ -174,26 +237,33 @@ def generate_student_recommendation(
     context = _build_student_context(db, student)
 
     if context is None:
-        setattr(student, field, not_enough_data_text)
+        setattr(student, field, json.dumps([not_enough_data_text]))
         student.recommendation_generated_at = now
         db.commit()
-        return {"text": not_enough_data_text, "generated_at": now.isoformat(), "has_data": False}
+        return {"bullets": [not_enough_data_text], "generated_at": now.isoformat(), "has_data": False}
 
     prompt = f"{framing}\n\n{_GROUNDING_RULES}\n\nSTUDENT DATA (JSON):\n{context}\n"
     raw = _call_llm(prompt)
 
-    if raw is None:
-        # LLM failed: keep whatever was already cached rather than
-        # overwriting it with nothing — the triggering interaction-recording
-        # flow must not crash or lose the previous good value either way.
-        existing = getattr(student, field, None) or not_enough_data_text
-        return {"text": existing, "generated_at": now.isoformat(), "has_data": True}
+    bullets = _parse_llm_bullets(raw) if raw is not None else None
 
-    text = _truncate(raw)
-    setattr(student, field, text)
+    if bullets is None:
+        # LLM call failed OR returned unparseable output: keep whatever was
+        # already cached rather than overwriting it with nothing/garbage —
+        # the triggering interaction-recording flow must not crash or lose
+        # the previous good value either way.
+        if raw is not None:
+            logger.warning(
+                f"Recommendation LLM output could not be parsed as bullets "
+                f"for student={student.student_id[:12]}..."
+            )
+        existing, _ = _parse_stored_bullets(getattr(student, field, None), not_enough_data_text)
+        return {"bullets": existing, "generated_at": now.isoformat(), "has_data": True}
+
+    setattr(student, field, json.dumps(bullets))
     student.recommendation_generated_at = now
     db.commit()
-    return {"text": text, "generated_at": now.isoformat(), "has_data": True}
+    return {"bullets": bullets, "generated_at": now.isoformat(), "has_data": True}
 
 
 def maybe_trigger_student_recommendation(db: Session, student_id: str) -> bool:
@@ -280,38 +350,51 @@ def refresh_cohort_insight(db: Session) -> dict:
     cohort — reusing the same trigger already required for per-student
     recommendations rather than adding a separate cron job or scheduler.
     GET /api/dashboard/teacher/overview only ever reads the cached row.
+
+    Stored on CohortInsight.insight_text as a JSON-encoded array of bullet
+    strings (Text column, same backward-compatible read path as per-student
+    recommendations — see _parse_stored_bullets). Returns
+    {"bullets": list[str], "generated_at": iso8601 str}.
     """
     now = datetime.now(timezone.utc)
     context = _build_cohort_context(db)
 
     row = db.get(CohortInsight, 1)
     if row is None:
-        row = CohortInsight(id=1, insight_text=NOT_ENOUGH_DATA_COHORT, generated_at=now, based_on_total_attempts=0)
+        row = CohortInsight(
+            id=1, insight_text=json.dumps([NOT_ENOUGH_DATA_COHORT]),
+            generated_at=now, based_on_total_attempts=0,
+        )
         db.add(row)
 
     if context is None:
-        row.insight_text = NOT_ENOUGH_DATA_COHORT
+        row.insight_text = json.dumps([NOT_ENOUGH_DATA_COHORT])
         row.generated_at = now
         row.based_on_total_attempts = 0
         db.commit()
-        return {"text": row.insight_text, "generated_at": now.isoformat()}
+        return {"bullets": [NOT_ENOUGH_DATA_COHORT], "generated_at": now.isoformat()}
 
     prompt = f"{_COHORT_FRAMING}\n\n{_GROUNDING_RULES}\n\nCOHORT DATA (JSON):\n{context}\n"
     raw = _call_llm(prompt)
+    bullets = _parse_llm_bullets(raw) if raw is not None else None
 
-    if raw is None:
-        # Keep the previous cached insight rather than overwriting with nothing.
+    if bullets is None:
+        if raw is not None:
+            logger.warning("Cohort insight LLM output could not be parsed as bullets")
+        # Keep the previous cached insight rather than overwriting with nothing/garbage.
         db.commit()
-        return {"text": row.insight_text or NOT_ENOUGH_DATA_COHORT, "generated_at": row.generated_at.isoformat()}
+        existing, _ = _parse_stored_bullets(row.insight_text, NOT_ENOUGH_DATA_COHORT)
+        return {"bullets": existing, "generated_at": row.generated_at.isoformat()}
 
-    row.insight_text = _truncate(raw)
+    row.insight_text = json.dumps(bullets)
     row.generated_at = now
     row.based_on_total_attempts = context["total_questions_answered"]
     db.commit()
-    return {"text": row.insight_text, "generated_at": now.isoformat()}
+    return {"bullets": bullets, "generated_at": now.isoformat()}
 
 
-def get_cohort_insight_text(db: Session) -> str:
+def get_cohort_insight_bullets(db: Session) -> list[str]:
     """Read-only accessor for the dashboard API — never triggers generation."""
     row = db.get(CohortInsight, 1)
-    return row.insight_text if row and row.insight_text else NOT_ENOUGH_DATA_COHORT
+    bullets, _ = _parse_stored_bullets(row.insight_text if row else None, NOT_ENOUGH_DATA_COHORT)
+    return bullets

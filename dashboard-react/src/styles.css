@@ -389,6 +389,34 @@ a {
   margin: 0;
 }
 
+.insight-card__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.insight-card__list li {
+  position: relative;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--dark-text);
+}
+
+.insight-card__list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+
 /* ── Charts ─────────────────────────────────────────────────────────────── */
 
 .chart-block {

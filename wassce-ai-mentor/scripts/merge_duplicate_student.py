@@ -230,17 +230,23 @@ def merge(keep_id: str, retire_id: str, execute: bool) -> None:
             )
             try:
                 result = generate_student_recommendation(db, keep, audience="student")
-                print(f"  student recommendation  -> {result['text']!r}")
+                print("  student recommendation:")
+                for bullet in result["bullets"]:
+                    print(f"    - {bullet}")
             except Exception as e:
                 print(f"  WARNING: student recommendation generation failed: {e}")
             try:
                 result = generate_student_recommendation(db, keep, audience="teacher")
-                print(f"  teacher recommendation  -> {result['text']!r}")
+                print("  teacher recommendation:")
+                for bullet in result["bullets"]:
+                    print(f"    - {bullet}")
             except Exception as e:
                 print(f"  WARNING: teacher recommendation generation failed: {e}")
             try:
                 result = refresh_cohort_insight(db)
-                print(f"  cohort insight refreshed -> {result['text']!r}")
+                print("  cohort insight refreshed:")
+                for bullet in result["bullets"]:
+                    print(f"    - {bullet}")
             except Exception as e:
                 print(f"  WARNING: cohort insight refresh failed: {e}")
         else:

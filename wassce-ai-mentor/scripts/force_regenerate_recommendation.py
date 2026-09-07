@@ -39,6 +39,9 @@ from ai.recommendations import (
     generate_student_recommendation,
     refresh_cohort_insight,
     RECOMMENDATION_TRIGGER_EVERY,
+    NOT_ENOUGH_DATA_STUDENT,
+    NOT_ENOUGH_DATA_TEACHER,
+    _parse_stored_bullets,
 )
 
 
@@ -53,12 +56,14 @@ def force_regenerate(student_id: str) -> None:
         profile = get_student_profile(db, student_id)
         total = sum(s["attempts"] for s in profile["subjects"].values())
 
+        before_student, _ = _parse_stored_bullets(student.recommendation_text, NOT_ENOUGH_DATA_STUDENT)
+        before_teacher, _ = _parse_stored_bullets(student.teacher_recommendation_text, NOT_ENOUGH_DATA_TEACHER)
         print(f"student_id     : {student_id}")
         print(f"name           : {student.name!r}")
         print(f"total_attempts : {total}")
-        print(f"BEFORE recommendation_text          : {student.recommendation_text!r}")
-        print(f"BEFORE teacher_recommendation_text  : {student.teacher_recommendation_text!r}")
-        print(f"BEFORE recommendation_generated_at  : {student.recommendation_generated_at}")
+        print(f"BEFORE recommendation_text (parsed)         : {before_student}")
+        print(f"BEFORE teacher_recommendation_text (parsed) : {before_teacher}")
+        print(f"BEFORE recommendation_generated_at          : {student.recommendation_generated_at}")
 
         if total < RECOMMENDATION_TRIGGER_EVERY:
             print(
@@ -71,15 +76,18 @@ def force_regenerate(student_id: str) -> None:
 
         print("\nGenerating student-framed recommendation (real LLM call)...")
         student_result = generate_student_recommendation(db, student, audience="student")
-        print(f"  -> {student_result['text']!r}")
+        for bullet in student_result["bullets"]:
+            print(f"  - {bullet}")
 
         print("Generating teacher-framed recommendation (real LLM call)...")
         teacher_result = generate_student_recommendation(db, student, audience="teacher")
-        print(f"  -> {teacher_result['text']!r}")
+        for bullet in teacher_result["bullets"]:
+            print(f"  - {bullet}")
 
         print("Refreshing cohort insight (real LLM call)...")
         cohort_result = refresh_cohort_insight(db)
-        print(f"  -> {cohort_result['text']!r}")
+        for bullet in cohort_result["bullets"]:
+            print(f"  - {bullet}")
 
         print("\nDone. Verify via GET /api/dashboard/student/<phone> or the teacher overview.")
     finally:

@@ -68,7 +68,7 @@ export default function StudentDashboard() {
         <StatCard label="Last Active" value={formatDate(data.last_active)} />
       </div>
 
-      <InsightCard label="AI Insight" text={data.recommendation} />
+      <InsightCard label="AI Insight" items={data.recommendation} hasData={data.recommendation_has_data} />
 
       <section className="section">
         <h2 className="section-title">Performance by Subject</h2>

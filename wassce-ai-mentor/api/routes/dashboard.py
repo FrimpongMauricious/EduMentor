@@ -20,7 +20,13 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DBSession
 
-from ai.recommendations import NOT_ENOUGH_DATA_STUDENT, NOT_ENOUGH_DATA_TEACHER, get_cohort_insight_text
+from ai.recommendations import (
+    NOT_ENOUGH_DATA_STUDENT,
+    NOT_ENOUGH_DATA_TEACHER,
+    NOT_ENOUGH_DATA_COHORT,
+    get_cohort_insight_bullets,
+    _parse_stored_bullets,
+)
 from config import get_settings
 from db.database import get_db
 from db.models import Interaction, PerformanceVector, Session as SessionRow, Student
@@ -145,9 +151,13 @@ def _student_detail(
     e164 = _resolve_e164(student, fallback_e164)
 
     if audience == "teacher":
-        recommendation = student.teacher_recommendation_text or NOT_ENOUGH_DATA_TEACHER
+        recommendation, recommendation_has_data = _parse_stored_bullets(
+            student.teacher_recommendation_text, NOT_ENOUGH_DATA_TEACHER
+        )
     else:
-        recommendation = student.recommendation_text or NOT_ENOUGH_DATA_STUDENT
+        recommendation, recommendation_has_data = _parse_stored_bullets(
+            student.recommendation_text, NOT_ENOUGH_DATA_STUDENT
+        )
 
     return {
         "name": student.name or "Student",
@@ -158,6 +168,7 @@ def _student_detail(
         "recent_activity": recent_activity,
         "last_active": student.last_seen_at.isoformat() if student.last_seen_at else None,
         "recommendation": recommendation,
+        "recommendation_has_data": recommendation_has_data,
     }
 
 
@@ -222,13 +233,15 @@ async def teacher_overview(
             "last_active": s.last_seen_at.isoformat() if s.last_seen_at else None,
         })
 
+    insights = get_cohort_insight_bullets(db)
     return {
         "total_students": len(students),
         "total_questions_answered": total_attempts,
         "overall_accuracy": overall_accuracy,
         "by_subject": _subject_breakdown(pvs),
         "students": student_rows,
-        "insights": get_cohort_insight_text(db),
+        "insights": insights,
+        "insights_has_data": insights != [NOT_ENOUGH_DATA_COHORT],
     }
 
 

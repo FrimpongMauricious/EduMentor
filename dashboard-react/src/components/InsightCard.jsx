@@ -1,14 +1,23 @@
-// Shared card for AI-generated text (per-student recommendation or
-// cohort-level insight). The backend always returns a non-empty string —
-// either a real recommendation or an honest "not enough data yet" message
-// — so this never needs to render an empty/broken-looking state itself.
-export default function InsightCard({ label, text }) {
-  if (!text) return null;
+// Shared card for AI-generated content (per-student recommendation or
+// cohort-level insight). The backend returns `items` as a list of bullet
+// points, plus `hasData` telling us whether that's a real, grounded list
+// or just the honest "not enough data yet" placeholder — the placeholder
+// always renders as a single plain message, never as a one-item bullet list.
+export default function InsightCard({ label, items, hasData }) {
+  if (!items || items.length === 0) return null;
 
   return (
     <div className="insight-card">
       <p className="insight-card__label">{label}</p>
-      <p className="insight-card__text">{text}</p>
+      {hasData ? (
+        <ul className="insight-card__list">
+          {items.map((item, idx) => (
+            <li key={idx}>{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="insight-card__text">{items[0]}</p>
+      )}
     </div>
   );
 }

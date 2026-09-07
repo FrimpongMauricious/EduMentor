@@ -103,7 +103,7 @@ export default function TeacherDashboard() {
         <StatCard label="Overall Accuracy" value={`${data.overall_accuracy}%`} accent />
       </div>
 
-      <InsightCard label="Cohort Insight" text={data.insights} />
+      <InsightCard label="Cohort Insight" items={data.insights} hasData={data.insights_has_data} />
 
       <section className="section">
         <h2 className="section-title">Accuracy by Subject</h2>
