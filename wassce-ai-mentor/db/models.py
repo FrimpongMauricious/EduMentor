@@ -42,6 +42,13 @@ class Session(Base):
     session_meta: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_expired: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    # Africa's Talking's per-call USSD sessionId (None for WhatsApp sessions).
+    # A new call always gets a new sessionId, even from the same phone
+    # number seconds after the last call ended — comparing this is how
+    # _get_or_create_session() tells "still the same call" apart from "a
+    # brand new call" without relying on elapsed time (see dialogue_manager).
+    ussd_session_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     student: Mapped["Student"] = relationship("Student", back_populates="sessions")
 
 

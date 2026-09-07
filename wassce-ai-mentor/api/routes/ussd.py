@@ -35,7 +35,7 @@ async def ussd_webhook(request: Request, db: DBSession = Depends(get_db)):
         f"| cumulative={text!r} last={last_input!r}"
     )
 
-    result = handle_message(db, student_id, "ussd", last_input)
+    result = handle_message(db, student_id, "ussd", last_input, ussd_session_id=session_id)
 
     reply = format_ussd_response(result.response, end_session=result.end_session)
     return Response(content=reply, media_type="text/plain")

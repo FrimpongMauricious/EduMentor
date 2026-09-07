@@ -91,8 +91,28 @@ def _get_or_create_student(db: Session, student_id: str, channel: str) -> Studen
     return student
 
 
-def _get_or_create_session(db: Session, student_id: str) -> SessionRow:
-    """Get the student's active session or create a new one. FR-12: expire after 30 min."""
+def _get_or_create_session(
+    db: Session, student_id: str, ussd_session_id: Optional[str] = None
+) -> SessionRow:
+    """
+    Get the student's active session or create a new one.
+
+    WhatsApp (ussd_session_id=None, unchanged from before): FR-12, expire
+    purely on inactivity — after settings.SESSION_TIMEOUT_MINUTES with no
+    message, the next one starts a new conversation. Correct for WhatsApp,
+    where a conversation really is one continuous thread over time.
+
+    USSD (ussd_session_id passed — a string, possibly empty, whenever the
+    caller is the USSD webhook): call-scoped, not time-scoped. Africa's
+    Talking assigns a brand new sessionId to every dial-in and keeps the
+    SAME sessionId for every request within one continuous call. A
+    student's FSM state must never survive past the call it was created
+    in, no matter how little real time has elapsed since — redialing 30
+    seconds after hanging up is a NEW call, not a continuation. So for
+    USSD, continuity is decided by comparing sessionId to what's stored on
+    the student's current session, never by elapsed time; any mismatch
+    (including nothing stored yet) means "new call, reset the state."
+    """
     timeout = timedelta(minutes=settings.SESSION_TIMEOUT_MINUTES)
     now = datetime.now(timezone.utc)
 
@@ -104,14 +124,24 @@ def _get_or_create_session(db: Session, student_id: str) -> SessionRow:
     active = db.scalars(stmt).first()
 
     if active is not None:
-        last = active.last_active_at
-        if last.tzinfo is None:
-            last = last.replace(tzinfo=timezone.utc)
-        if now - last <= timeout:
-            return active
-        active.is_expired = True
-        db.commit()
-        logger.info(f"Session {active.session_id[:8]} expired for student {student_id[:12]}...")
+        if ussd_session_id is not None:
+            if active.ussd_session_id == ussd_session_id:
+                return active  # same USSD call — continue exactly as before
+            active.is_expired = True
+            db.commit()
+            logger.info(
+                f"USSD session {active.session_id[:8]} superseded by a new call "
+                f"(sessionId changed) for student {student_id[:12]}..."
+            )
+        else:
+            last = active.last_active_at
+            if last.tzinfo is None:
+                last = last.replace(tzinfo=timezone.utc)
+            if now - last <= timeout:
+                return active
+            active.is_expired = True
+            db.commit()
+            logger.info(f"Session {active.session_id[:8]} expired for student {student_id[:12]}...")
 
     new_session = SessionRow(
         session_id=str(uuid.uuid4()),
@@ -121,6 +151,7 @@ def _get_or_create_session(db: Session, student_id: str) -> SessionRow:
         fsm_state=FSMState.GREETING.value,
         current_difficulty="easy",
         question_history=json.dumps([]),
+        ussd_session_id=ussd_session_id,
     )
     db.add(new_session)
 
@@ -854,6 +885,7 @@ def handle_message(
     student_id: str,
     channel: str,
     incoming_text: str,
+    ussd_session_id: Optional[str] = None,
 ) -> DialogueResult:
     """
     Process one inbound student message through the FSM.
@@ -865,11 +897,18 @@ def handle_message(
 
     WhatsApp responses are never paginated (full text always delivered).
 
+    ussd_session_id: Africa's Talking's per-call sessionId, passed by
+    api/routes/ussd.py on every USSD request (never by the WhatsApp
+    webhook, which leaves this None). See _get_or_create_session() — this
+    is what stops a brand new USSD call from resuming a previous call's
+    leftover FSM state just because it arrived within the WhatsApp-style
+    inactivity timeout window.
+
     Returns a DialogueResult containing the response text, new state,
     and metadata for logging.
     """
     student = _get_or_create_student(db, student_id, channel)
-    session = _get_or_create_session(db, student_id)
+    session = _get_or_create_session(db, student_id, ussd_session_id=ussd_session_id)
 
     current_state = FSMState(session.fsm_state)
     text = (incoming_text or "").strip()

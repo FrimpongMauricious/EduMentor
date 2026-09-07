@@ -98,6 +98,7 @@ def test_all_migrations_run_against_legacy_sqlite_schema(sqlite_engine):
     database._migrate_add_phone_number()
     database._migrate_add_student_name()
     database._migrate_add_recommendation_fields()
+    database._migrate_add_ussd_session_id()
 
     inspector = inspect(sqlite_engine)
     student_columns = {col["name"] for col in inspector.get_columns("students")}
@@ -108,7 +109,7 @@ def test_all_migrations_run_against_legacy_sqlite_schema(sqlite_engine):
         "recommendation_text", "teacher_recommendation_text",
         "recommendation_generated_at",
     } <= student_columns
-    assert "session_meta" in session_columns
+    assert {"session_meta", "ussd_session_id"} <= session_columns
 
 
 def test_migrations_are_idempotent(sqlite_engine):
@@ -121,6 +122,7 @@ def test_migrations_are_idempotent(sqlite_engine):
         database._migrate_add_phone_number()
         database._migrate_add_student_name()
         database._migrate_add_recommendation_fields()
+        database._migrate_add_ussd_session_id()
 
 
 def test_no_sqlite_only_types_in_migration_source():

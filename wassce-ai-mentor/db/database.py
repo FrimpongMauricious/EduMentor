@@ -47,6 +47,7 @@ def init_db():
     _migrate_add_phone_number()
     _migrate_add_student_name()
     _migrate_add_recommendation_fields()
+    _migrate_add_ussd_session_id()
 
 
 def _migrate_add_session_meta() -> None:
@@ -115,6 +116,20 @@ def _migrate_add_recommendation_fields() -> None:
                 f"ALTER TABLE students ADD COLUMN recommendation_generated_at {datetime_type}"
             ))
         conn.commit()
+
+
+def _migrate_add_ussd_session_id() -> None:
+    """Add ussd_session_id column to sessions table if missing (safe to call repeatedly)."""
+    from sqlalchemy import inspect, text
+    inspector = inspect(engine)
+    try:
+        columns = [col["name"] for col in inspector.get_columns("sessions")]
+    except Exception:
+        return
+    if "ussd_session_id" not in columns:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE sessions ADD COLUMN ussd_session_id TEXT"))
+            conn.commit()
 
 
 def get_session():
