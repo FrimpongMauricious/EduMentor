@@ -1,14 +1,24 @@
 """
 tests/test_phone_validation.py — Regression coverage for the phone-number
-input-validation fix (Twilio can occasionally deliver a non-numeric "From"
+input-validation fixes (Twilio can occasionally deliver a non-numeric "From"
 identifier for WhatsApp messages instead of a real E.164 number — confirmed
-in production logs, e.g. "whatsapp:GH.2142378006405521"). Covers:
+in production logs, e.g. "whatsapp:GH.2142378006405521"). Two separate fixes
+are covered here:
 
-  - The WhatsApp webhook only persists Student.phone_number when it passes
-    is_valid_phone(), end to end through the real endpoint.
-  - Downstream dashboard behaviour for a student left with phone_number=None
-    is already correct and stays correct: teacher view renders "unknown",
-    student-by-phone lookup 404s (fails safe instead of matching garbage).
+  - 51a1c6b: don't *store* a bad "From" as Student.phone_number.
+  - Follow-up root-cause fix: don't *hash* a bad "From" into a brand-new
+    student_id at all. 51a1c6b alone still let api/routes/whatsapp.py derive
+    student_id = sha256(normalise_phone(From)) from the garbled value before
+    validating it, silently forking a second, permanently phoneless Student
+    record for what could be an existing student's account glitching. The
+    webhook now checks is_valid_phone(From) BEFORE deriving any student_id;
+    an invalid From creates or touches no Student row at all and gets a
+    generic decline reply instead.
+
+Also covers downstream dashboard behaviour for a student left with
+phone_number=None (from before either fix, or some other cause): teacher
+view renders "unknown", student-by-phone lookup 404s (fails safe instead of
+matching garbage) — already correct and confirmed to stay correct.
 """
 from datetime import datetime
 
@@ -20,6 +30,7 @@ from sqlalchemy.pool import StaticPool
 
 from api.main import app
 from api.routes import dashboard
+from api.routes.whatsapp import UNRECOGNISED_SENDER_REPLY
 from config import get_settings
 from db.database import Base, get_db
 from db.models import Student
@@ -66,17 +77,60 @@ def _reset_rate_limit():
 # ── Webhook: validated write ────────────────────────────────────────────────
 
 class TestWebhookPhoneValidation:
-    def test_invalid_from_value_is_not_stored(self, client, db_session):
+    def test_invalid_from_value_creates_no_student_identity(self, client, db_session):
+        """
+        Root-cause fix: an invalid From must never be hashed into a new
+        student_id. This replaces a superseded version of this test that
+        asserted a Student row WAS created for BAD_FROM (with phone_number
+        left None) — that was asserting the bug itself (a second, permanently
+        phoneless identity forked off a garbled Twilio value). The correct
+        behaviour is that no identity is created or touched at all.
+        """
         response = client.post("/webhook/whatsapp", data={"From": BAD_FROM, "Body": "Hi"})
         assert response.status_code == 200
+        assert "Sorry" in response.text  # generic decline, not a real FSM reply
 
         student = db_session.get(Student, phone_to_student_id(BAD_FROM))
-        assert student is not None  # the interaction itself is still recorded
-        assert student.phone_number is None  # but the bad identifier is rejected
+        assert student is None
 
     def test_valid_from_value_is_stored(self, client, db_session):
         response = client.post("/webhook/whatsapp", data={"From": GOOD_FROM, "Body": "Hi"})
         assert response.status_code == 200
+
+        student = db_session.get(Student, phone_to_student_id(GOOD_FROM))
+        assert student is not None
+        assert student.phone_number == GOOD_FROM
+
+    def test_valid_from_value_unaffected_by_the_new_guard(self, client, db_session):
+        """Task 2 regression check: the validation guard is edge-case-only —
+        a normal, valid sender goes through handle_message() exactly as
+        before and gets a real FSM reply, not the generic decline message."""
+        response = client.post(
+            "/webhook/whatsapp",
+            data={"From": "whatsapp:+233531850867", "Body": "Hi"},
+        )
+        assert response.status_code == 200
+        assert UNRECOGNISED_SENDER_REPLY not in response.text
+
+        student = db_session.get(Student, phone_to_student_id("whatsapp:+233531850867"))
+        assert student is not None
+        assert student.phone_number == "whatsapp:+233531850867"
+
+    def test_student_registers_normally_after_a_prior_declined_bad_from(self, client, db_session):
+        """A transient bad-From message leaves no trace under any identity,
+        so it can never block that same person's registration: their next
+        message with a valid From (whether Twilio recovers on their next
+        send, or they simply retry) is handled as an ordinary first contact,
+        with no leftover state from the declined attempt."""
+        bad_response = client.post("/webhook/whatsapp", data={"From": BAD_FROM, "Body": "Hi"})
+        assert bad_response.status_code == 200
+        assert db_session.get(Student, phone_to_student_id(BAD_FROM)) is None
+
+        good_response = client.post(
+            "/webhook/whatsapp", data={"From": GOOD_FROM, "Body": "Hi"}
+        )
+        assert good_response.status_code == 200
+        assert UNRECOGNISED_SENDER_REPLY not in good_response.text
 
         student = db_session.get(Student, phone_to_student_id(GOOD_FROM))
         assert student is not None
